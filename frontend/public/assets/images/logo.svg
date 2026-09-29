@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="28" viewBox="0 0 120 28" fill="none">
+  <circle cx="12" cy="14" r="8.5" stroke="#7432FF" stroke-width="3"/>
+  <circle cx="12" cy="14" r="3.5" fill="#7432FF"/>
+  <text x="28" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="800" fill="currentColor" letter-spacing="-0.04em">Focoya</text>
+</svg>
