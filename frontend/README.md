@@ -1,0 +1,1670 @@
+# Focoya
+
+> **Your cozy place to focus.**
+
+Focoya là ứng dụng web **phòng học ảo cộng đồng** giúp người dùng duy trì sự tập trung bằng cách kết hợp không gian học Lo-fi/ambient, Pomodoro, hiện diện thời gian thực, gamification và thống kê tiến độ học tập.
+
+Dự án được xây dựng cho môn **SE347 – Công nghệ Web và Ứng dụng**, với kiến trúc tách biệt Frontend/Backend, có REST API, WebSocket real-time, cơ sở dữ liệu quan hệ và triển khai thực tế.
+
+---
+
+## 1. Tổng quan
+
+Học một mình trong thời gian dài dễ mất tập trung và thiếu động lực. Focoya tạo cảm giác "đang học cùng người khác" bằng cách cho người dùng tham gia các phòng học ảo như:
+
+- ☕ Rainy Café
+- 📚 Midnight Library
+- 🍁 Japanese Autumn
+- 🌅 Sunset Beach
+
+Trong phòng, người dùng có thể:
+
+- nhìn thấy thành viên khác đang online;
+- biết ai đang học, nghỉ hoặc vừa hoàn thành phiên học;
+- sử dụng Pomodoro cá nhân;
+- nghe âm thanh ambient;
+- trò chuyện ngắn trong phòng;
+- tích lũy XP, level, streak và badge;
+- theo dõi thời gian học qua dashboard;
+- cạnh tranh nhẹ nhàng qua leaderboard tuần.
+
+### Giá trị cốt lõi
+
+Focoya không cố trở thành mạng xã hội, Discord hay Zoom. Trọng tâm của sản phẩm là:
+
+> **Shared focus experience — tạo cảm giác có người đồng hành để duy trì trạng thái tập trung.**
+
+---
+
+## 2. Mục tiêu dự án
+
+### Mục tiêu sản phẩm
+
+- Tạo một không gian học trực tuyến trực quan, thư giãn và ít gây phân tâm.
+- Khuyến khích người dùng duy trì thói quen học đều đặn.
+- Cho phép học cùng bạn bè hoặc người lạ theo thời gian thực.
+- Biến quá trình học thành một trải nghiệm có tiến trình thông qua XP, level, streak và achievement.
+- Cung cấp thống kê đủ trực quan để người dùng hiểu thói quen học của bản thân.
+
+### Mục tiêu kỹ thuật
+
+- Xây dựng đầy đủ **Frontend + Backend**.
+- Tách biệt rõ trách nhiệm Client và Server.
+- Sử dụng REST API cho dữ liệu cần lưu trữ.
+- Sử dụng WebSocket cho dữ liệu thời gian thực.
+- Áp dụng authentication/authorization.
+- Thiết kế cơ sở dữ liệu quan hệ.
+- Xây dựng responsive web application.
+- Tài liệu hóa API và kiến trúc hệ thống.
+- Deploy ứng dụng để có thể demo trực tiếp.
+
+---
+
+# 3. Tech Stack
+
+Stack được giữ ở mức vừa sức cho nhóm sinh viên đầu năm 3: đủ để thể hiện Frontend, Backend, Database, Authentication và Realtime nhưng tránh over-engineering.
+
+## Frontend
+
+| Công nghệ | Vai trò |
+|---|---|
+| React | Xây dựng giao diện theo component |
+| TypeScript | Giảm lỗi kiểu dữ liệu |
+| Vite | Development server và build frontend |
+| React Router | Routing và protected routes |
+| Tailwind CSS | Responsive layout và styling |
+| CSS Animation | Rain, leaves, lighting và ambience |
+| Axios | Gọi REST API |
+| Recharts | Biểu đồ thống kê |
+
+Không bắt buộc ở MVP: TanStack Query, React Hook Form, Zod, Motion for React và react-activity-calendar.
+
+## Backend
+
+| Công nghệ | Vai trò |
+|---|---|
+| Java 21 | Ngôn ngữ backend |
+| Spring Boot | Framework backend chính |
+| Spring Web | REST API |
+| Spring Data JPA | Truy cập database |
+| Hibernate | ORM thông qua JPA |
+| Spring Security | Authentication/authorization cơ bản |
+| JWT | Xác thực request |
+| Spring WebSocket | Realtime presence/status/chat |
+| Bean Validation | Validate request |
+| PostgreSQL Driver | Kết nối PostgreSQL |
+
+Backend giữ flow đơn giản:
+
+```text
+Controller
+   ↓
+Service
+   ↓
+Repository
+   ↓
+PostgreSQL
+```
+
+Không dùng trong đồ án: Microservices, Redis, Kafka, Spring Cloud, Kubernetes, DDD/Hexagonal Architecture, CQRS, MapStruct, QueryDSL, generic service/repository framework.
+
+## Database
+
+| Công nghệ | Vai trò |
+|---|---|
+| PostgreSQL | Database chính |
+| Docker Compose | Chỉ dùng để chạy PostgreSQL local |
+| Supabase PostgreSQL | Database khi deploy |
+
+## Development & Deployment
+
+| Thành phần | Công nghệ |
+|---|---|
+| Version Control | Git + GitHub |
+| Local Database | Docker Compose |
+| Frontend Deploy | Vercel |
+| Backend Deploy | Railway |
+| Database Deploy | Supabase |
+| API Testing | Postman; Swagger là tùy chọn |
+| Design | Figma |
+
+### Chủ động không làm trong MVP
+
+- Google OAuth2
+- Refresh token rotation
+- Email verification / forgot password / 2FA
+- Video call / voice call
+- Friend system
+- Group synchronized Pomodoro
+- AI API / Maps API / Payment
+- User-uploaded music/background
+- Admin dashboard phức tạp
+
+Mục tiêu: **ít công nghệ hơn nhưng tất cả thành viên hiểu được code và bảo vệ được đồ án.**
+
+---
+
+# 4. Kiến trúc hệ thống
+
+```text
+                    ┌───────────────────────┐
+                    │       Frontend        │
+                    │    React + Vite       │
+                    └──────────┬────────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    │                     │
+                 REST API              WebSocket
+                    │                     │
+                    ▼                     ▼
+              ┌─────────────────────────────────┐
+              │          Spring Boot            │
+              │                                 │
+              │ Controllers    WebSocket        │
+              │      │          Handler         │
+              │      ▼             │            │
+              │   Services     Presence Map     │
+              │      │                          │
+              │      ▼                          │
+              │ Repositories                    │
+              └──────────────┬──────────────────┘
+                             │
+                             │ JPA
+                             ▼
+                    ┌─────────────────┐
+                    │   PostgreSQL    │
+                    └─────────────────┘
+```
+
+## Nguyên tắc phân chia
+
+**REST API + PostgreSQL** dùng cho dữ liệu cần lưu lâu dài:
+
+- user/profile;
+- room;
+- study session;
+- XP;
+- dashboard;
+- leaderboard.
+
+**WebSocket** chỉ dùng cho dữ liệu tức thời trong phòng:
+
+- online presence;
+- join/leave;
+- `STUDYING / BREAK / IDLE`;
+- chat nếu nhóm làm P1.
+
+> **Persistent data → REST + Database**  
+> **Realtime transient data → WebSocket**
+
+Không realtime hóa dashboard, profile, analytics hay lịch sử học.
+
+---
+
+# 5. Các tính năng chính
+
+## 5.1 Authentication & Profile
+
+### MVP
+
+- Đăng ký bằng email/password.
+- Đăng nhập bằng email/password.
+- Logout phía client.
+- JWT cho protected API.
+- Password hash bằng BCrypt.
+- Protected routes.
+- Profile cơ bản:
+  - display name;
+  - avatar có sẵn;
+  - bio;
+  - XP;
+  - level;
+  - tổng thời gian học.
+
+### Không làm trong MVP
+
+- Google OAuth2.
+- Refresh token rotation.
+- Email verification.
+- Forgot password.
+- 2FA.
+
+JWT có expiration. Khi token hết hạn, người dùng đăng nhập lại.
+
+### Avatar
+
+MVP dùng bộ avatar có sẵn, không cần upload ảnh tùy chỉnh.
+
+---
+
+## 5.2 Study Rooms
+
+### Public Rooms
+
+Public room được seed sẵn bởi hệ thống.
+
+Ví dụ:
+
+1. Rainy Paris Café
+2. Midnight Library
+3. Japanese Autumn
+4. Sunset Beach
+
+Mỗi phòng gồm:
+
+- tên;
+- mô tả;
+- theme;
+- background scene;
+- ambient sound;
+- số người online hiện tại;
+- giới hạn người dùng.
+
+### Private Rooms
+
+User có thể tạo phòng riêng:
+
+- room name;
+- theme;
+- max slots;
+- invite code tự sinh.
+
+MVP không cho user tạo public room để tránh phát sinh moderation/admin.
+
+---
+
+## 5.3 Room Preview
+
+Trước khi vào phòng, user có thể xem:
+
+- ảnh/animated preview;
+- tên phòng;
+- mô tả;
+- số người đang online;
+- ambience;
+- giới hạn slot;
+- nút Join Room.
+
+---
+
+## 5.4 Real-time Presence
+
+Trong phòng, người dùng nhìn thấy các thành viên đang online.
+
+Trạng thái:
+
+```text
+IDLE
+STUDYING
+BREAK
+```
+
+Các event chính:
+
+```text
+USER_JOINED
+USER_LEFT
+PRESENCE_SNAPSHOT
+STATUS_CHANGED
+```
+
+Ví dụ:
+
+```text
+Thọ      STUDYING 🍅
+Phong    BREAK ☕
+Tiên     STUDYING 🍅
+Thảo     IDLE
+Tân      STUDYING 🍅
+```
+
+### Presence Registry
+
+Presence không lưu trực tiếp vào PostgreSQL.
+
+Ở MVP:
+
+```text
+roomId
+ ├── user A -> STUDYING
+ ├── user B -> BREAK
+ └── user C -> IDLE
+```
+
+được quản lý trong memory của backend.
+
+Khi socket disconnect:
+
+1. xóa user khỏi registry;
+2. broadcast `USER_LEFT`;
+3. frontend cập nhật danh sách người đang online.
+
+---
+
+# 6. Pomodoro
+
+Pomodoro chạy chủ yếu ở **frontend**.
+
+## Thiết lập mặc định
+
+```text
+Focus        25 phút
+Short Break   5 phút
+Long Break   15 phút
+```
+
+Mỗi user có timer riêng:
+
+```text
+Thọ     23:48 STUDYING
+Phong   08:21 STUDYING
+Tiên    03:40 BREAK
+```
+
+Server **không cần đếm từng giây**.
+
+## Flow đơn giản
+
+```text
+User nhấn Start
+      ↓
+Frontend chạy countdown
+      ↓
+WebSocket gửi STATUS_CHANGE = STUDYING
+      ↓
+Timer hoàn thành
+      ↓
+POST /api/study-sessions
+      ↓
+Backend lưu session
+      ↓
+Backend cộng +10 XP
+```
+
+Ví dụ request:
+
+```json
+{
+  "roomId": "room-id",
+  "durationMinutes": 25
+}
+```
+
+Backend không nhận `xpEarned` từ client; XP được tính ở server.
+
+---
+
+# 7. Gamification
+
+## XP
+
+MVP dùng luật rất đơn giản:
+
+```text
+1 Pomodoro hoàn thành = +10 XP
+```
+
+Backend quyết định XP.
+
+Không xây rule engine.
+
+## Level
+
+Level được suy ra từ `totalXp`, không cần lưu duplicate trong database.
+
+| XP | Level |
+|---:|---|
+| 0–99 | Newbie |
+| 100–299 | Scholar |
+| 300–699 | Focus Pro |
+| 700–1499 | Master |
+| 1500+ | Legend |
+
+## Badge & Streak
+
+Badge và streak thuộc **P1**. Chỉ thêm khi core flow đã ổn.
+
+Ví dụ:
+
+```text
+totalPomodoros == 1 → First Step
+streak == 7         → On Fire
+```
+
+Không cần hệ thống condition/rule tổng quát.
+
+---
+
+# 8. Badge & Achievement
+
+Badge là tính năng **P1**, không phải điều kiện để MVP hoàn thành.
+
+Nếu triển khai, chỉ cần một số badge cố định:
+
+| Badge | Điều kiện |
+|---|---|
+| 🌱 First Step | Hoàn thành Pomodoro đầu tiên |
+| 🔥 On Fire | Streak 7 ngày |
+| 🦉 Night Owl | Học sau 00:00 |
+| ⚡ Speed Runner | 10 Pomodoro trong 1 ngày |
+
+Không cần rarity engine hoặc condition engine động.
+
+---
+
+# 9. Dashboard
+
+Dashboard MVP chỉ cần:
+
+- tổng thời gian học hôm nay;
+- thời gian học tuần này;
+- số Pomodoro;
+- total XP;
+- level;
+- biểu đồ thời gian học 7 ngày;
+- recent study sessions.
+
+Ví dụ:
+
+```text
+┌─────────────────────────────────────────────┐
+│ Today       Week      Pomodoros      Level  │
+│ 2h15m       11h40m       28        Scholar │
+└─────────────────────────────────────────────┘
+
+Study time — 7 days
+
+Mon ███
+Tue █████
+Wed ██
+Thu ██████
+Fri ████
+Sat █
+Sun ███
+```
+
+Heatmap, favorite room, khung giờ học nhiều nhất và weekly goal thuộc P2.
+
+---
+
+# 10. Leaderboard
+
+MVP chỉ cần leaderboard tuần.
+
+Ranking dựa trên:
+
+- total focus minutes trong tuần.
+
+Hiển thị:
+
+```text
+#1  User A   920 phút
+#2  User B   865 phút
+#3  User C   812 phút
+...
+```
+
+Có thể hiển thị thêm:
+
+- level;
+- avatar;
+- current streak.
+
+Không nên dùng XP làm tiêu chí chính vì XP có bonus và achievement.
+
+---
+
+# 11. Room Chat
+
+Chat chỉ đóng vai trò phụ để chứng minh realtime.
+
+Giới hạn MVP:
+
+- text only;
+- tối đa 200 ký tự;
+- rate limit;
+- chỉ giữ khoảng 30–50 message gần nhất;
+- có thể không persist vào database.
+
+Không triển khai:
+
+- image;
+- file;
+- reaction phức tạp;
+- thread;
+- voice;
+- history dài hạn.
+
+---
+
+# 12. Database Design
+
+MVP chỉ cần **3 bảng chính**.
+
+## User
+
+```text
+id              UUID PK
+email           VARCHAR UNIQUE NOT NULL
+passwordHash    VARCHAR NOT NULL
+displayName     VARCHAR NOT NULL
+avatarKey       VARCHAR
+bio             VARCHAR
+totalXp         INT DEFAULT 0
+createdAt       TIMESTAMP
+updatedAt       TIMESTAMP
+```
+
+Có thể thêm `currentStreak`, `longestStreak` sau nếu làm P1.
+
+## Room
+
+```text
+id               UUID PK
+ownerId          UUID FK -> User NULL
+name             VARCHAR NOT NULL
+description      TEXT
+themeKey         VARCHAR
+sceneKey         VARCHAR
+ambientTrackKey  VARCHAR
+visibility       PUBLIC | PRIVATE
+inviteCode       VARCHAR NULL
+maxSlots         INT
+createdAt        TIMESTAMP
+```
+
+Public room seed sẵn có thể để `ownerId = NULL`.
+
+## StudySession
+
+```text
+id               UUID PK
+userId           UUID FK -> User
+roomId           UUID FK -> Room
+durationMinutes  INT
+completedAt      TIMESTAMP
+```
+
+MVP **không cần bảng PomodoroLog riêng**. Mỗi Pomodoro hoàn thành tạo một StudySession.
+
+## Optional P1
+
+Nếu làm badge:
+
+```text
+Badge
+-----
+id
+code
+name
+description
+iconKey
+```
+
+```text
+UserBadge
+---------
+userId
+badgeId
+unlockedAt
+```
+
+---
+
+# 13. Quan hệ dữ liệu
+
+```mermaid
+erDiagram
+    USER ||--o{ STUDY_SESSION : completes
+    ROOM ||--o{ STUDY_SESSION : contains
+    USER ||--o{ ROOM : creates
+```
+
+MVP không cần DailyGoal, PomodoroLog hoặc bảng RefreshToken.
+
+---
+
+# 14. REST API
+
+Base URL:
+
+```text
+/api
+```
+
+## Auth
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+```
+
+## User
+
+```http
+GET   /api/users/me
+PATCH /api/users/me
+GET   /api/users/{id}
+```
+
+## Rooms
+
+P0:
+
+```http
+GET /api/rooms
+GET /api/rooms/{id}
+```
+
+P1:
+
+```http
+POST /api/rooms
+POST /api/rooms/join-by-code
+```
+
+## Study Sessions
+
+```http
+POST /api/study-sessions
+GET  /api/study-sessions
+```
+
+Khi tạo session:
+
+```text
+1. backend lấy user từ JWT
+2. validate room
+3. lưu StudySession
+4. cộng +10 XP
+5. trả session + totalXp mới
+```
+
+## Dashboard
+
+```http
+GET /api/dashboard/summary
+GET /api/dashboard/study-time
+GET /api/dashboard/recent-sessions
+```
+
+## Leaderboard
+
+```http
+GET /api/leaderboard/weekly
+```
+
+Không có API refresh token, OAuth hoặc PomodoroLog trong MVP.
+
+---
+
+# 15. WebSocket Contract
+
+WebSocket chỉ dùng cho room realtime.
+
+## Logical Events
+
+```text
+JOIN_ROOM
+LEAVE_ROOM
+STATUS_CHANGE
+PRESENCE_SNAPSHOT
+USER_JOINED
+USER_LEFT
+CHAT_MESSAGE      // P1
+```
+
+Presence được giữ trong memory của backend:
+
+```text
+roomId
+ ├── user A -> STUDYING
+ ├── user B -> BREAK
+ └── user C -> IDLE
+```
+
+Không cần Redis hoặc external message broker.
+
+Nếu nhóm dùng STOMP của Spring, có thể tổ chức:
+
+```text
+/ws
+/topic/rooms/{roomId}
+/app/rooms/{roomId}/join
+/app/rooms/{roomId}/status
+```
+
+STOMP chỉ là chi tiết implementation; không cần kiến trúc messaging phức tạp.
+
+---
+
+# 16. Frontend Routes
+
+| Route | Trang |
+|---|---|
+| `/` | Landing |
+| `/login` | Login |
+| `/register` | Register |
+| `/rooms` | Explore Rooms |
+| `/rooms/:id/preview` | Room Preview |
+| `/rooms/:id` | Live Study Room |
+| `/rooms/create` | Create Private Room |
+| `/dashboard` | Personal Dashboard |
+| `/history` | Study History |
+| `/leaderboard` | Weekly Leaderboard |
+| `/badges` | Achievements |
+| `/profile/:username` | Public Profile |
+| `/settings` | Settings |
+
+Tổng cộng trên 10 màn hình có ý nghĩa thực tế.
+
+---
+
+# 17. UI/UX Direction
+
+## Nguyên tắc thiết kế
+
+- Cozy.
+- Immersive.
+- Calm.
+- Minimal distraction.
+- Không biến study room thành generic SaaS dashboard.
+- Scene phải là phần trung tâm của trải nghiệm.
+
+## Live Room
+
+```text
+┌──────────────────────────────────────────────────────┐
+│                                                      │
+│                 RAINY CAFÉ                           │
+│                                                      │
+│      ☕           📚          💻          🌙          │
+│     Thọ          Phong       Tiên        Tân         │
+│   Studying       Break     Studying    Studying      │
+│                                                      │
+│                       23:48                          │
+│                  ┌─────────────┐                     │
+│                  │ Pause Focus │                     │
+│                  └─────────────┘                     │
+│                                                      │
+│──────────────────────────────────────────────────────│
+│ 🔊 Rain 60%   💬 Chat   🏆 Weekly   ⚙ Timer         │
+└──────────────────────────────────────────────────────┘
+```
+
+## Animation
+
+### CSS Animation
+
+Dùng cho:
+
+- mưa;
+- lá rơi;
+- ánh đèn;
+- cloud/fog;
+- background movement.
+
+Ưu tiên animate:
+
+```css
+transform
+opacity
+background-position
+```
+
+### Accessibility
+
+Hỗ trợ:
+
+```css
+@media (prefers-reduced-motion: reduce)
+```
+
+---
+
+# 18. Project Structure
+
+## Frontend
+
+```text
+frontend/
+├── public/
+├── src/
+│   ├── app/
+│   │   ├── router/
+│   │   ├── providers/
+│   │   └── App.tsx
+│   │
+│   ├── features/
+│   │   ├── auth/
+│   │   ├── rooms/
+│   │   ├── pomodoro/
+│   │   ├── dashboard/
+│   │   ├── leaderboard/
+│   │   ├── achievements/
+│   │   └── profile/
+│   │
+│   ├── components/
+│   │   ├── ui/
+│   │   └── common/
+│   │
+│   ├── hooks/
+│   ├── lib/
+│   │   ├── api/
+│   │   ├── websocket/
+│   │   └── utils/
+│   │
+│   ├── assets/
+│   │   ├── avatars/
+│   │   ├── scenes/
+│   │   └── audio/
+│   │
+│   └── styles/
+│
+├── package.json
+└── vite.config.ts
+```
+
+## Backend
+
+```text
+backend/
+├── src/main/java/.../
+│   ├── auth/
+│   │   ├── AuthController
+│   │   ├── AuthService
+│   │   └── dto/
+│   │
+│   ├── user/
+│   │   ├── UserController
+│   │   ├── UserService
+│   │   ├── UserRepository
+│   │   └── User.java
+│   │
+│   ├── room/
+│   │   ├── RoomController
+│   │   ├── RoomService
+│   │   ├── RoomRepository
+│   │   └── Room.java
+│   │
+│   ├── study/
+│   │   ├── StudySessionController
+│   │   ├── StudySessionService
+│   │   └── entity/
+│   │
+│   ├── websocket/
+│   │   ├── WebSocketConfig
+│   │   ├── RoomSocketController
+│   │
+│   ├── security/
+│   │
+│   └── common/
+│       ├── exception/
+│       ├── response/
+│       └── config/
+│
+├── src/main/resources/
+│   └── application.yml
+│
+└── pom.xml
+```
+
+---
+
+# 19. Phân công nhóm
+
+Nhóm gồm 5 thành viên.
+
+## Thọ — Backend Lead
+
+Phụ trách chính:
+
+- PostgreSQL schema;
+- ERD;
+- Spring Boot setup;
+- Spring Security;
+- JWT;
+- User API;
+- Room API;
+- WebSocket backend;
+- Presence Registry;
+- Pomodoro backend;
+- StudySession;
+- backend testing;
+- Swagger/OpenAPI.
+
+---
+
+## Phong — Fullstack / Integration Lead
+
+Phụ trách chính:
+
+- kiến trúc tổng thể repository;
+- tích hợp frontend ↔ backend;
+- authentication integration;
+- WebSocket client;
+- private room flow;
+- realtime chat;
+- environment/config;
+- deployment;
+- integration testing;
+- final release.
+
+---
+
+## Tiên — Fullstack / Data & Gamification
+
+Phụ trách chính:
+
+- API contract;
+- Study History;
+- XP;
+- level;
+- streak;
+- badge;
+- daily goal;
+- dashboard API;
+- dashboard frontend;
+- leaderboard;
+- seed/test data.
+
+---
+
+## Thảo — Frontend / UI Lead
+
+Phụ trách chính:
+
+- design system;
+- common UI components;
+- authentication pages;
+- landing page;
+- profile;
+- settings;
+- responsive;
+- accessibility;
+- UI consistency;
+- final UI polish;
+- tài liệu UI/UX.
+
+---
+
+## Tân — Frontend / Room Experience
+
+Phụ trách chính:
+
+- room list;
+- room preview;
+- live study room;
+- animated scenes;
+- ambient sound;
+- avatar/presence UI;
+- Pomodoro UI;
+- room animation;
+- performance optimization;
+- demo visual preparation.
+
+---
+
+# 20. Phân công theo module
+
+| Module | Main | Support |
+|---|---|---|
+| Project Architecture | Phong | Thọ |
+| Database / ERD | Thọ | Tiên |
+| API Contract | Tiên | Thọ |
+| Authentication Backend | Thọ | Phong |
+| Authentication Frontend | Thảo | Phong |
+| User/Profile Backend | Thọ | Tiên |
+| Profile Frontend | Thảo | Tiên |
+| Room Backend | Thọ | Phong |
+| Room List/Preview | Tân | Thảo |
+| Private Room | Phong | Tân |
+| WebSocket Backend | Thọ | Phong |
+| WebSocket Client | Phong | Tân |
+| Presence UI | Tân | Phong |
+| Pomodoro Backend | Thọ | Tiên |
+| Pomodoro UI | Tân | Thảo |
+| Gamification Backend | Tiên | Thọ |
+| Achievement UI | Thảo | Tiên |
+| Dashboard Backend | Tiên | Thọ |
+| Dashboard Frontend | Tiên | Thảo |
+| Leaderboard | Tiên | Tân |
+| Chat Backend | Phong | Thọ |
+| Chat Frontend | Phong | Tân |
+| UI System | Thảo | Tân |
+| Scene Animation | Tân | Thảo |
+| Deploy | Phong | Thọ |
+| Final Integration | Phong | All |
+| Demo | Tân | All |
+| Documentation | All | — |
+
+---
+
+# 21. Development Roadmap
+
+## Sprint 0 — Foundation
+
+Mục tiêu:
+
+- chốt requirement;
+- chốt database;
+- chốt API contract;
+- setup repositories;
+- setup React/Vite;
+- setup Spring Boot;
+- setup PostgreSQL;
+- setup Docker Compose;
+- xây Design System cơ bản.
+
+Deliverable:
+
+```text
+Frontend chạy
+Backend chạy
+Database connect
+Design token cơ bản
+```
+
+---
+
+## Sprint 1 — Authentication & Core Data
+
+Mục tiêu:
+
+- register;
+- login;
+- JWT;
+- User/Profile;
+- Room entity/API;
+- public room seed;
+- auth UI;
+- room list.
+
+Deliverable:
+
+```text
+Login → Explore Rooms
+```
+
+---
+
+## Sprint 2 — Live Study Room
+
+Mục tiêu:
+
+- room detail;
+- WebSocket connection;
+- join/leave;
+- presence;
+- user status;
+- room UI;
+- scene animation;
+- ambient audio.
+
+Deliverable:
+
+```text
+2 browser tabs join cùng room và thấy nhau realtime
+```
+
+---
+
+## Sprint 3 — Pomodoro & Sessions
+
+Mục tiêu:
+
+- Pomodoro;
+- StudySession;
+- status sync;
+- persistent history;
+- XP;
+- streak.
+
+Deliverable:
+
+```text
+Start Pomodoro
+→ Complete
+→ StudySession update
+→ XP update
+```
+
+---
+
+## Sprint 4 — Gamification & Dashboard
+
+Mục tiêu:
+
+- badge;
+- level;
+- leaderboard;
+- dashboard;
+- heatmap;
+- weekly goal;
+- history.
+
+Deliverable:
+
+```text
+Pomodoro hoàn thành
+→ Dashboard cập nhật
+→ XP/Badge/Leaderboard cập nhật
+```
+
+---
+
+## Sprint 5 — Finalization
+
+Mục tiêu:
+
+- private room;
+- invite code;
+- chat;
+- responsive;
+- accessibility;
+- bug fixing;
+- deployment;
+- demo rehearsal;
+- documentation.
+
+---
+
+# 22. MVP Priority
+
+## P0 — Bắt buộc
+
+- [ ] Register/Login
+- [ ] JWT authentication
+- [ ] Profile cơ bản
+- [ ] Public Rooms
+- [ ] Room Preview
+- [ ] Live Study Room
+- [ ] Realtime Presence
+- [ ] User Status
+- [ ] Personal Pomodoro
+- [ ] StudySession
+- [ ] Study History
+- [ ] XP + Level
+- [ ] Dashboard cơ bản
+- [ ] Weekly Leaderboard
+- [ ] Responsive UI
+- [ ] Deployment
+
+## P1 — Làm sau core
+
+- [ ] Private Room
+- [ ] Invite Code
+- [ ] Chat
+- [ ] Badge
+- [ ] Streak
+- [ ] Ambient controls nâng cao
+
+## P2 — Chỉ làm nếu còn nhiều thời gian
+
+- [ ] Heatmap
+- [ ] Daily/Weekly Goal
+- [ ] More themes
+- [ ] Public profile nâng cao
+- [ ] Level-up animation nâng cao
+
+## Không làm trong đồ án
+
+- [ ] Google OAuth
+- [ ] Refresh token rotation
+- [ ] Friend system
+- [ ] Voice chat
+- [ ] Video call
+- [ ] Group synchronized Pomodoro
+- [ ] Admin dashboard phức tạp
+- [ ] AI assistant
+- [ ] Redis
+- [ ] Kafka
+- [ ] Microservices
+- [ ] Kubernetes
+- [ ] Mobile app
+
+---
+
+# 23. API Security Rules
+
+Các nguyên tắc đủ cho MVP:
+
+- Password hash bằng BCrypt.
+- Không lưu plain-text password.
+- Không trả password hash về frontend.
+- JWT có expiration.
+- Protected API phải kiểm tra JWT.
+- Validate request ở backend.
+- Backend tự quyết định XP.
+- Không tin `userId` hoặc `xp` do frontend tự gửi.
+- Không commit secrets lên Git.
+- `.env` phải nằm trong `.gitignore`.
+
+Không cần OAuth2, refresh-token rotation hoặc security architecture phức tạp.
+
+---
+
+# 24. XP Completion Flow
+
+```text
+User starts Pomodoro
+        ↓
+Frontend countdown
+        ↓
+Timer finishes
+        ↓
+POST /api/study-sessions
+        ↓
+Backend validates
+        ├─ lấy user từ JWT
+        ├─ lưu StudySession
+        ├─ +10 XP
+        └─ tính level mới
+        ↓
+Response
+```
+
+Ví dụ response:
+
+```json
+{
+  "sessionId": "uuid",
+  "durationMinutes": 25,
+  "xpEarned": 10,
+  "totalXp": 340,
+  "level": "Focus Pro"
+}
+```
+
+Badge/streak chỉ bổ sung nếu nhóm làm P1.
+
+---
+
+# 25. Demo Scenario
+
+Kịch bản demo cuối kỳ đề xuất:
+
+```text
+1. Mở Landing Page
+        ↓
+2. Login
+        ↓
+3. Explore Rooms
+        ↓
+4. Rainy Café hiển thị 3 online
+        ↓
+5. Vào phòng
+        ↓
+6. Animated rain + ambient sound
+        ↓
+7. Mở tab/browser thứ hai
+        ↓
+8. Account B join room
+        ↓
+9. Account A thấy B xuất hiện realtime
+        ↓
+10. A Start Pomodoro
+        ↓
+11. B thấy A chuyển sang STUDYING
+        ↓
+12. B gửi chat message
+        ↓
+13. A hoàn thành Pomodoro
+        ↓
+14. +10 XP
+        ↓
+15. Level-up / Badge animation
+        ↓
+16. Mở Dashboard
+        ↓
+17. Study time + heatmap cập nhật
+        ↓
+18. Mở Leaderboard
+        ↓
+19. Ranking cập nhật
+```
+
+Đây là luồng demo end-to-end:
+
+```text
+Frontend
++ Backend
++ Database
++ Authentication
++ Real-time
++ Animation
++ Gamification
++ Statistics
+```
+
+---
+
+# 26. Rủi ro và cách xử lý
+
+| Rủi ro | Mức độ | Giải pháp |
+|---|---|---|
+| WebSocket disconnect | Cao | Auto reconnect + resync presence |
+| Backend deploy cold start | Trung bình | Dùng Railway trong giai đoạn demo |
+| Animation lag | Trung bình | Ưu tiên transform/opacity |
+| Scope quá lớn | Cao | Theo P0/P1/P2 |
+| Timer bị lệch | Trung bình | Dựa trên server timestamp |
+| XP gian lận | Cao | Backend validate reward |
+| Demo room không có người | Trung bình | Chuẩn bị nhiều account/tab test |
+| FE/BE mismatch | Cao | Chốt API contract trước |
+| Merge conflict | Trung bình | Feature branch + PR nhỏ |
+| Thành viên bị block | Trung bình | Dependency rõ trong tracker |
+
+---
+
+# 27. Environment Variables
+
+## Frontend `.env`
+
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
+VITE_WS_URL=http://localhost:8080/ws
+```
+
+## Backend
+
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/focoya
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+
+JWT_SECRET=change-this-secret
+JWT_EXPIRATION=86400000
+
+FRONTEND_URL=http://localhost:5173
+```
+
+Không commit `.env` chứa secret.
+
+MVP không cần:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+JWT_REFRESH_EXPIRATION
+```
+
+---
+
+# 28. Local Development
+
+## Yêu cầu
+
+- Node.js
+- npm / pnpm
+- Java 21
+- Maven
+- Docker
+- Docker Compose
+- Git
+
+## Clone
+
+```bash
+git clone <repository-url>
+cd focoya
+```
+
+## Database
+
+```bash
+docker compose up -d
+```
+
+## Backend
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+Backend:
+
+```text
+http://localhost:8080
+```
+
+Swagger:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+## Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend:
+
+```text
+http://localhost:5173
+```
+
+---
+
+# 29. Git Workflow
+
+Branch chính:
+
+```text
+main
+develop
+```
+
+Feature branches:
+
+```text
+feature/auth
+feature/room-list
+feature/websocket-presence
+feature/pomodoro
+feature/dashboard
+feature/leaderboard
+fix/...
+```
+
+Quy trình:
+
+```text
+feature branch
+    ↓
+commit
+    ↓
+push
+    ↓
+Pull Request
+    ↓
+review
+    ↓
+merge develop
+    ↓
+test
+    ↓
+merge main
+```
+
+Commit convention đề xuất:
+
+```text
+feat:
+fix:
+refactor:
+style:
+docs:
+test:
+chore:
+```
+
+Ví dụ:
+
+```text
+feat(room): add realtime presence
+fix(auth): refresh expired token
+docs(api): update room endpoints
+```
+
+---
+
+# 30. Definition of Done
+
+Một task chỉ được coi là hoàn thành khi:
+
+- chức năng chạy đúng;
+- không có lỗi console nghiêm trọng;
+- responsive ở desktop/mobile cơ bản;
+- API đã validate;
+- error state đã xử lý;
+- loading state đã xử lý;
+- code đã push;
+- PR đã được review;
+- không làm hỏng feature khác;
+- tài liệu/API contract được cập nhật nếu thay đổi.
+
+---
+
+# 31. Coding Principles
+
+## Frontend
+
+- Component nhỏ, trách nhiệm rõ.
+- API call tập trung trong `services/`.
+- Dùng Axios cho REST.
+- Không hard-code URL.
+- Không duplicate business logic.
+- Không thêm state-management hoặc form library nếu chưa thật sự cần.
+- Ưu tiên code dễ đọc hơn abstraction phức tạp.
+
+## Backend
+
+Luồng chuẩn:
+
+```text
+Controller
+   ↓
+Service
+   ↓
+Repository
+   ↓
+Database
+```
+
+- Controller không chứa business logic lớn.
+- DTO tách khỏi Entity nếu response có dữ liệu nhạy cảm.
+- Không tạo `BaseService`, `GenericRepository` chỉ để code trông phức tạp.
+- Không dùng pattern/framework mà nhóm chưa hiểu.
+- Khi có hai cách tương đương, ưu tiên cách dễ giải thích khi vấn đáp.
+
+---
+
+# 32. Future Development
+
+Sau khi hoàn thành MVP có thể mở rộng:
+
+- Google OAuth.
+- Refresh token.
+- Badge và streak nâng cao.
+- Daily/weekly goals.
+- Contribution heatmap.
+- Private room nâng cao.
+- Persistent room chat.
+- Group synchronized Pomodoro.
+- Friend system.
+- Shared task list.
+- More ambient environments.
+- PWA / mobile app.
+- Redis presence nếu sau này chạy nhiều backend instance.
+
+Những phần này **không phải yêu cầu để hoàn thành đồ án hiện tại**.
+
+---
+
+# 33. Tên dự án
+
+## Focoya
+
+Tên được hình thành từ ý tưởng:
+
+```text
+Focus + Koya (小屋)
+```
+
+`Koya` mang nghĩa gần với một căn phòng/cabin nhỏ.
+
+Tên thể hiện đúng tinh thần:
+
+> một không gian nhỏ, ấm cúng để tập trung cùng nhau.
+
+### Tagline
+
+> **Your cozy place to focus.**
+
+Tên repository đề xuất:
+
+```text
+focoya
+focoya-web
+focoya-api
+```
+
+---
+
+# 34. Summary
+
+Focoya tập trung vào một flow duy nhất nhưng đủ sâu:
+
+```text
+Join Room
+   ↓
+See People Studying
+   ↓
+Start Pomodoro
+   ↓
+Stay Focused
+   ↓
+Complete Session
+   ↓
+Earn XP / Badge
+   ↓
+Track Progress
+   ↓
+Come Back Tomorrow
+```
+
+Điểm nổi bật của đồ án không nằm ở số lượng chức năng mà ở việc kết hợp tốt:
+
+- immersive UI;
+- realtime presence;
+- Pomodoro;
+- backend business logic;
+- gamification;
+- analytics;
+- responsive web;
+- production deployment.
+
+Nếu các module P0 được hoàn thiện ổn định, Focoya đã đủ để trở thành một đồ án Web Development có tính trình diễn cao và có kiến trúc rõ ràng để bảo vệ khi vấn đáp.
+
+---
+
+## Team
+
+| Thành viên | Vai trò |
+|---|---|
+| Thọ | Backend Lead |
+| Phong | Fullstack / Integration Lead |
+| Tiên | Fullstack / Data & Gamification |
+| Thảo | Frontend / UI Lead |
+| Tân | Frontend / Room Experience |
+
+---
+
+## License
+
+Dự án được phát triển phục vụ mục đích học tập trong môn **SE347 – Công nghệ Web và Ứng dụng**.
