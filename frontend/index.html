@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focoya | Không gian tập trung của bạn</title>
+    <meta
+      name="description"
+      content="Focoya giúp bạn lên kế hoạch, tập trung hiệu quả và duy trì thói quen học tập trong một không gian ấm cúng."
+    />
+    <link rel="icon" type="image/jpeg" href="/assets/assets/favicon.jpg" />
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("theme");
+          if (stored === "light") {
+            document.documentElement.removeAttribute("data-theme");
+          } else {
+            document.documentElement.setAttribute("data-theme", "dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="min-h-full flex flex-col font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
