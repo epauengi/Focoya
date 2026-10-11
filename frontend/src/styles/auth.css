@@ -1,0 +1,240 @@
+/* Tổng quan layout và căn giữa màn hình */
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background-image: url("../../public/assets/assets/bg.jpg");
+  background-size: cover;
+  font-family: "Manrope", sans-serif;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.auth-logo {
+  position: absolute;
+  top: 30px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  text-decoration: none;
+  margin-bottom: 24px;
+  letter-spacing: -0.5px;
+}
+
+/* Khung card đăng nhập */
+.auth-card {
+  background: #ffffff;
+  padding: 28px 36px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 440px;
+  box-sizing: border-box;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.auth-form-group {
+  margin-bottom: 8px;
+}
+
+.auth-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+  border-color: #5598fb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+.auth-password-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.auth-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #9ca3af;
+}
+
+.auth-primary-btn {
+  text-align: center;
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  color: #fff;
+  font-weight: 500;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  font-family: "Manrope", sans-serif;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+  transition: opacity 0.2s;
+  margin-top: 8px;
+}
+
+.auth-primary-btn:hover {
+  opacity: 0.9;
+}
+
+.auth-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-btn-google {
+  width: 100%;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.auth-btn-google:hover {
+  background: #f9fafb;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.auth-divider span {
+  padding: 0 10px;
+}
+
+.auth-error-alert {
+  background: #fef2f2;
+  border: 1px solid #f87171;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.auth-link {
+  color: #5598fb;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-footer-text {
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 20px;
+}
+
+.auth-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+}
+
+.auth-checkbox-input {
+  width: 14px;
+  height: 14px;
+  accent-color: #6b7280;
+  cursor: pointer;
+}
+
+/* Trang quên mật khẩu */
+.auth-success-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+.auth-success-message {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.auth-form-spacing {
+  margin-bottom: 12px;
+}

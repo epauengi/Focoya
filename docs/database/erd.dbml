@@ -1,0 +1,86 @@
+// Focoya ERD v1 — dán toàn bộ file này vào https://dbdiagram.io rồi Export PNG/PDF.
+// Nguồn sự thật là backend/study-room-backend/src/main/resources/db/migration/V1__init_schema.sql.
+// Sửa schema thì sửa migration trước, rồi cập nhật file này cho khớp.
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [not null, unique]
+  password_hash varchar(255) [not null]
+  display_name varchar(50) [not null]
+  avatar_key varchar(50)
+  bio varchar(200)
+  role varchar(20) [not null, default: 'USER', note: 'USER | ADMIN']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table gamification_profiles {
+  id uuid [pk]
+  user_id uuid [not null, unique, ref: - users.id]
+  total_xp int [not null, default: 0]
+  current_streak int [not null, default: 0]
+  longest_streak int [not null, default: 0]
+  last_study_date date
+  daily_goal_minutes int [not null, default: 60]
+  updated_at timestamptz [not null]
+  Note: 'Level không lưu, tính từ total_xp'
+}
+
+Table rooms {
+  id uuid [pk]
+  owner_id uuid [ref: > users.id, note: 'NULL với public room seed sẵn']
+  name varchar(100) [not null]
+  description text
+  theme_key varchar(50) [not null]
+  scene_key varchar(50)
+  ambient_track_key varchar(50)
+  visibility varchar(10) [not null, note: 'PUBLIC | PRIVATE']
+  invite_code varchar(6) [unique, note: 'Chỉ private room có']
+  max_slots int [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    owner_id
+  }
+}
+
+Table study_sessions {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  room_id uuid [not null, ref: > rooms.id]
+  status varchar(20) [not null, default: 'IN_PROGRESS', note: 'IN_PROGRESS | COMPLETED | CANCELLED']
+  started_at timestamptz [not null]
+  ended_at timestamptz
+  duration_minutes int
+  xp_earned int [not null, default: 0]
+  created_at timestamptz [not null]
+
+  indexes {
+    (user_id, started_at)
+    room_id
+    (status, ended_at)
+  }
+}
+
+Table badges {
+  id uuid [pk]
+  code varchar(50) [not null, unique]
+  name varchar(100) [not null]
+  description varchar(255)
+  icon_key varchar(50)
+  condition_type varchar(50) [not null]
+  condition_value int [not null]
+}
+
+Table user_badges {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  badge_id uuid [not null, ref: > badges.id]
+  unlocked_at timestamptz [not null]
+
+  indexes {
+    (user_id, badge_id) [unique]
+  }
+}
