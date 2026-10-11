@@ -1,0 +1,927 @@
+openapi: 3.0.3
+info:
+  title: Virtual Study Room API
+  description: API Contract v1 cho nền tảng phòng học ảo và cộng đồng.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Đăng ký, đăng nhập, đăng xuất
+  - name: User
+    description: Thông tin và profile người dùng
+  - name: Room
+    description: Phòng học
+  - name: Study
+    description: Phiên học
+  - name: Gamification
+    description: XP, streak, daily goal và badge
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Đăng ký tài khoản
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Đăng nhập
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Đăng xuất
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Đăng xuất thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me:
+    get:
+      tags: [User]
+      summary: Lấy thông tin user hiện tại
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Thông tin user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      tags: [User]
+      summary: Cập nhật profile
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Profile đã được cập nhật
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/{userId}:
+    get:
+      tags: [User]
+      summary: Xem profile user
+      operationId: getUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Profile user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rooms:
+    get:
+      tags: [Room]
+      summary: Danh sách phòng
+      operationId: getRooms
+      responses:
+        "200":
+          description: Danh sách phòng
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rooms]
+                properties:
+                  rooms:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Room"
+
+    post:
+      tags: [Room]
+      summary: Tạo phòng
+      operationId: createRoom
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomRequest"
+      responses:
+        "200":
+          description: Phòng đã được tạo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /rooms/{roomId}:
+    get:
+      tags: [Room]
+      summary: Chi tiết phòng
+      operationId: getRoom
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Chi tiết phòng
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [Room]
+      summary: Cập nhật phòng
+      operationId: updateRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoomRequest"
+      responses:
+        "200":
+          description: Phòng đã được cập nhật
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rooms/{roomId}/join:
+    post:
+      tags: [Room]
+      summary: Tham gia phòng
+      operationId: joinRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRoomRequest"
+      responses:
+        "200":
+          description: Tham gia phòng thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomJoinResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Phòng đầy hoặc không thể tham gia
+
+  /rooms/{roomId}/leave:
+    post:
+      tags: [Room]
+      summary: Rời phòng
+      operationId: leaveRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Rời phòng thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomLeaveResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rooms/{roomId}/close:
+    post:
+      tags: [Room]
+      summary: Đóng phòng
+      operationId: closeRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Đóng phòng thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomCloseResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /study-sessions:
+    post:
+      tags: [Study]
+      summary: Bắt đầu phiên học
+      operationId: startStudySession
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartStudySessionRequest"
+      responses:
+        "200":
+          description: Phiên học đã được bắt đầu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    get:
+      tags: [Study]
+      summary: Lịch sử học
+      operationId: getStudySessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lịch sử phiên học của user
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/StudySessionHistoryItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /study-sessions/{sessionId}:
+    patch:
+      tags: [Study]
+      summary: Kết thúc hoặc cập nhật phiên học
+      operationId: updateStudySession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudySessionRequest"
+      responses:
+        "200":
+          description: Phiên học đã được cập nhật
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    get:
+      tags: [Study]
+      summary: Chi tiết phiên học
+      operationId: getStudySession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Chi tiết phiên học
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /gamification/me:
+    get:
+      tags: [Gamification]
+      summary: Lấy XP, streak và daily goal
+      operationId: getMyGamification
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Thông tin gamification của user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GamificationProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /gamification/me/goal:
+    patch:
+      tags: [Gamification]
+      summary: Cập nhật daily goal
+      operationId: updateDailyGoal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDailyGoalRequest"
+      responses:
+        "200":
+          description: Daily goal đã được cập nhật
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyGoalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /badges:
+    get:
+      tags: [Gamification]
+      summary: Danh sách badge
+      operationId: getBadges
+      responses:
+        "200":
+          description: Danh sách tất cả badge
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [badges]
+                properties:
+                  badges:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Badge"
+
+  /users/me/badges:
+    get:
+      tags: [Gamification]
+      summary: Badge của user
+      operationId: getMyBadges
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Các badge user đã đạt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [badges]
+                properties:
+                  badges:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserBadge"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, displayName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        displayName:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        avatarKey:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [USER, ADMIN]
+
+    PublicUser:
+      type: object
+      required: [id, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatarKey:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [USER, ADMIN]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        avatarKey:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+
+    Room:
+      type: object
+      required:
+        - id
+        - ownerId
+        - name
+        - themeKey
+        - visibility
+        - maxSlots
+        - isActive
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        themeKey:
+          type: string
+        sceneKey:
+          type: string
+          nullable: true
+        ambientTrackKey:
+          type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        inviteCode:
+          type: string
+          nullable: true
+        maxSlots:
+          type: integer
+        isActive:
+          type: boolean
+
+    CreateRoomRequest:
+      type: object
+      required:
+        - name
+        - themeKey
+        - visibility
+        - maxSlots
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        themeKey:
+          type: string
+        sceneKey:
+          type: string
+          nullable: true
+        ambientTrackKey:
+          type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        maxSlots:
+          type: integer
+
+    UpdateRoomRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        themeKey:
+          type: string
+        sceneKey:
+          type: string
+          nullable: true
+        ambientTrackKey:
+          type: string
+          nullable: true
+        maxSlots:
+          type: integer
+
+    JoinRoomRequest:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+          nullable: true
+
+    RoomJoinResponse:
+      type: object
+      required: [roomId]
+      properties:
+        roomId:
+          type: string
+          format: uuid
+
+    RoomLeaveResponse:
+      type: object
+      required: [roomId]
+      properties:
+        roomId:
+          type: string
+          format: uuid
+
+    RoomCloseResponse:
+      type: object
+      required: [roomId, isActive]
+      properties:
+        roomId:
+          type: string
+          format: uuid
+        isActive:
+          type: boolean
+
+    StartStudySessionRequest:
+      type: object
+      required: [roomId]
+      properties:
+        roomId:
+          type: string
+          format: uuid
+
+    UpdateStudySessionRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [COMPLETED, CANCELLED]
+
+    StudySession:
+      type: object
+      required:
+        - id
+        - userId
+        - roomId
+        - status
+        - startedAt
+        - xpEarned
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED, CANCELLED]
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMinutes:
+          type: integer
+          nullable: true
+        xpEarned:
+          type: integer
+
+    StudySessionHistoryItem:
+      type: object
+      required:
+        - id
+        - roomId
+        - status
+        - startedAt
+        - xpEarned
+      properties:
+        id:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED, CANCELLED]
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMinutes:
+          type: integer
+          nullable: true
+        xpEarned:
+          type: integer
+
+    GamificationProfile:
+      type: object
+      required:
+        - totalXp
+        - level
+        - currentStreak
+        - longestStreak
+        - dailyGoalMinutes
+      properties:
+        totalXp:
+          type: integer
+        level:
+          type: integer
+          description: Level được backend tính từ totalXp.
+        currentStreak:
+          type: integer
+        longestStreak:
+          type: integer
+        lastStudyDate:
+          type: string
+          format: date
+          nullable: true
+        dailyGoalMinutes:
+          type: integer
+
+    UpdateDailyGoalRequest:
+      type: object
+      required: [dailyGoalMinutes]
+      properties:
+        dailyGoalMinutes:
+          type: integer
+
+    DailyGoalResponse:
+      type: object
+      required: [dailyGoalMinutes]
+      properties:
+        dailyGoalMinutes:
+          type: integer
+
+    Badge:
+      type: object
+      required: [id, code, name, description, iconKey]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        iconKey:
+          type: string
+          nullable: true
+
+    UserBadge:
+      type: object
+      required: [id, code, name, description, iconKey, unlockedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        iconKey:
+          type: string
+          nullable: true
+        unlockedAt:
+          type: string
+          format: date-time
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Request không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Chưa đăng nhập hoặc JWT không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Không có quyền thực hiện thao tác
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Không tìm thấy tài nguyên
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
