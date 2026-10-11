@@ -1,10 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router";
+import { startDemoSession } from "@/auth/demoSession";
 import { AuthLayout } from "../../components/auth/authlayout";
 import { InputField } from "../../components/auth/inputfield";
 import { PrimaryButton } from "../../components/auth/primarybutton";
 import { Checkbox } from "../../components/auth/checkbox";
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -24,8 +27,9 @@ export const LoginPage: React.FC = () => {
     // Trạng thái Loading state
     setIsLoading(true);
     setTimeout(() => {
+      startDemoSession();
       setIsLoading(false);
-      alert("Đăng nhập thành công!");
+      navigate("/dashboard");
     }, 1500);
   };
 

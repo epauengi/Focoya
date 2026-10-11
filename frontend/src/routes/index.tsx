@@ -1,4 +1,6 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, redirect } from "react-router";
+import { isDemoAuthenticated } from "@/auth/demoSession";
+import { DashboardPage } from "./dashboard/DashboardPage";
 import { RootLayout } from "@/layouts/RootLayout";
 import { LandingPage } from "./landing/LandingPage";
 import { LoginPage } from "./authentication/LoginPage";
@@ -13,6 +15,11 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <LandingPage />,
+      },
+      {
+        path: "/dashboard",
+        loader: () => isDemoAuthenticated() ? null : redirect("/login"),
+        element: <DashboardPage />,
       },
       {
         path: "/login",

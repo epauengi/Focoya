@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Image } from "@/components/common/Image";
-import { EmojiButton } from "./EmojiButton";
+import { isDemoAuthenticated } from "@/auth/demoSession";
 
 const features = [
   {
@@ -58,6 +58,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
+  const appPath = isDemoAuthenticated() ? "/dashboard" : "/login";
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 100);
@@ -146,9 +147,9 @@ export function Navbar() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 0 1 8.646 3.646 9.003 9.003 0 1 0 20.354 15.354Z" />
               </svg>
             </button>
-            <EmojiButton className="nav-cta" href="#dashboard">
+            <Link className="btn btn-primary nav-cta" to={appPath}>
               Mở Focoya
-            </EmojiButton>
+            </Link>
           </div>
           <button
             className={`navbar-toggler${menuOpen ? " active" : ""}`}
@@ -217,9 +218,9 @@ export function Navbar() {
           </div>
         </div>
         <div className="mobile-menu-footer">
-          <EmojiButton href="#dashboard" onClick={closeMenu}>
+          <Link className="btn btn-primary" to={appPath} onClick={closeMenu}>
             Mở Focoya
-          </EmojiButton>
+          </Link>
         </div>
       </div>
     </>
