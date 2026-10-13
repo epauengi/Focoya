@@ -20,3 +20,14 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+
+# JWT. Secret phải dài >= 32 ký tự (HMAC-SHA256 cần khóa 256 bit).
+# Mặc định chỉ dùng cho local. Lên server thật phải đặt biến môi trường JWT_SECRET.
+jwt:
+  secret: ${JWT_SECRET:focoya-local-dev-secret-key-do-not-use-in-production}
+  access-token-minutes: 30
+  refresh-token-days: 7
+
+# CORS: địa chỉ trang FE được phép gọi API. Lúc deploy đặt biến môi trường CORS_ALLOWED_ORIGIN.
+cors:
+  allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5174}
