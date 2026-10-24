@@ -1,6 +1,10 @@
-import { createBrowserRouter, redirect } from "react-router";
+import { createBrowserRouter, Navigate, redirect } from "react-router";
+import { RoomsLayout } from "@/features/rooms/RoomsLayout";
+import { ExplorePage, MyRoomsPage } from "@/features/rooms/ExplorePage";
+import { RoomPreviewPage } from "@/features/rooms/RoomPreviewPage";
+import { FocusRoomPage } from "@/features/rooms/FocusRoomPage";
 import { isDemoAuthenticated } from "@/auth/demoSession";
-import { DashboardPage } from "./dashboard/DashboardPage";
+
 import { RootLayout } from "@/layouts/RootLayout";
 import { LandingPage } from "./landing/LandingPage";
 import { LoginPage } from "./authentication/LoginPage";
@@ -8,6 +12,15 @@ import { RegisterPage } from "./authentication/RegisterPage";
 import { ForgotPasswordPage } from "./authentication/ForgotPasswordPage";
 
 export const router = createBrowserRouter([
+  {
+    element: <RoomsLayout />,
+    children: [
+      { path: "/rooms", element: <ExplorePage /> },
+      { path: "/rooms/:roomId/preview", element: <RoomPreviewPage /> },
+      { path: "/rooms/:roomId", element: <FocusRoomPage /> },
+      { path: "/my-rooms", element: <MyRoomsPage /> },
+    ],
+  },
   {
     path: "/",
     element: <RootLayout />,
@@ -19,7 +32,7 @@ export const router = createBrowserRouter([
       {
         path: "/dashboard",
         loader: () => isDemoAuthenticated() ? null : redirect("/login"),
-        element: <DashboardPage />,
+        element: <Navigate to="/rooms" replace />,
       },
       {
         path: "/login",
