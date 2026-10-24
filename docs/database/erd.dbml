@@ -1,6 +1,6 @@
 // Focoya ERD v1 — dán toàn bộ file này vào https://dbdiagram.io rồi Export PNG/PDF.
-// Nguồn sự thật là backend/study-room-backend/src/main/resources/db/migration/V1__init_schema.sql.
-// Sửa schema thì sửa migration trước, rồi cập nhật file này cho khớp.
+// Nguồn sự thật là các class trong backend/study-room-backend/src/main/java/com/lofi/studyroombackend/entity/ (Hibernate ddl-auto: update tạo bảng).
+// Sửa entity trước, rồi cập nhật file này cho khớp.
 
 Table users {
   id uuid [pk]

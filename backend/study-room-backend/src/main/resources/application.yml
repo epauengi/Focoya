@@ -10,8 +10,9 @@ spring:
 
   jpa:
     hibernate:
-      # Flyway tạo/sửa schema. Hibernate CHỈ kiểm tra entity khớp với bảng, sai là app không khởi động.
-      ddl-auto: validate
+      # update: Hibernate tự tạo bảng/cột còn thiếu dựa trên các class trong entity/.
+      # Lưu ý: update KHÔNG xóa và KHÔNG đổi tên cột. Đổi tên field -> sinh cột mới, cột cũ vẫn nằm lại.
+      ddl-auto: update
     open-in-view: false
     show-sql: true
     properties:
@@ -20,6 +21,13 @@ spring:
         jdbc:
           time_zone: UTC
 
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+# JWT. Secret phải dài >= 32 ký tự (HMAC-SHA256 cần khóa 256 bit).
+# Mặc định chỉ dùng cho local. Lên server thật phải đặt biến môi trường JWT_SECRET.
+jwt:
+  secret: ${JWT_SECRET:focoya-local-dev-secret-key-do-not-use-in-production}
+  access-token-minutes: 30
+  refresh-token-days: 7
+
+# CORS: địa chỉ trang FE được phép gọi API. Lúc deploy đặt biến môi trường CORS_ALLOWED_ORIGIN.
+cors:
+  allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5174}

@@ -10,7 +10,6 @@ Backend API server cho ứng dụng Study Room.
 - **Spring Data JPA** — ORM & truy vấn database
 - **Spring WebSocket** — Giao tiếp realtime
 - **PostgreSQL 15** — Cơ sở dữ liệu
-- **Flyway** — Migration schema
 - **Lombok** — Giảm boilerplate code
 - **Maven** — Quản lý dependency & build
 
@@ -25,8 +24,7 @@ study-room-backend/
 │   │   └── enums/       # Enum dùng trong entity (UserRole, RoomVisibility, ...)
 │   └── StudyRoomBackendApplication.java
 ├── src/main/resources/
-│   ├── application.yml
-│   └── db/migration/    # Flyway migration (V1__init_schema.sql, ...)
+│   └── application.yml
 └── pom.xml
 ```
 

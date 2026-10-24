@@ -9,20 +9,32 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Check;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.UUID;
 
+// PUBLIC: seed sẵn, không có chủ, không có invite code.
+// PRIVATE: user tạo, bắt buộc có chủ + invite code 6 ký tự.
 @Entity
-@Table(name = "rooms")
+@Table(
+        name = "rooms",
+        // Tìm các phòng do 1 user tạo (giới hạn tối đa 2 private room/user, TSK-12).
+        indexes = @Index(name = "idx_rooms_owner_id", columnList = "owner_id")
+)
+@Check(name = "chk_rooms_private_fields", constraints = """
+        (visibility = 'PRIVATE' AND owner_id IS NOT NULL AND invite_code IS NOT NULL)
+        OR (visibility = 'PUBLIC' AND invite_code IS NULL)""")
+@Check(name = "chk_rooms_max_slots", constraints = "max_slots > 0")
 @Getter
 @Setter
 @NoArgsConstructor
