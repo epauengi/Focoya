@@ -1,0 +1,8 @@
+window.ROOMS = [
+  { "id": 1, "name": "Cozy Café", "theme": "Café", "online": 12, "maxSlots": 16, "image": "assets/rainy.jpg", "description": "A warm corner with soft jazz and the hum of an espresso machine." },
+  { "id": 2, "name": "Sakura Garden", "theme": "Nature", "online": 8, "maxSlots": 12, "image": "assets/autumn.png", "description": "Petals drifting over a quiet path. Calm and slow." },
+  { "id": 3, "name": "Space Station", "theme": "Gaming", "online": 20, "maxSlots": 24, "image": "assets/midnight.png", "description": "A night-time city lounge for fellow players." },
+  { "id": 4, "name": "Study Corner", "theme": "Study", "online": 5, "maxSlots": 10, "image": "assets/rainy.jpg", "description": "Focused, quiet desks and gentle lamp light for deep work." },
+  { "id": 5, "name": "Sunset Lounge", "theme": "Chill", "online": 15, "maxSlots": 20, "image": "assets/sunset.jpg", "description": "Golden-hour skies, lo-fi beats and relaxed conversation." },
+  { "id": 6, "name": "Forest Hideaway", "theme": "Nature", "online": 7, "maxSlots": 10, "image": "assets/autumn.png", "description": "A hillside hideaway among autumn trees." }
+]

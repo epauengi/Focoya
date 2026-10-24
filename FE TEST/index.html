@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focoya — Không Gian Học Tập Trực Tuyến</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <a href="#/" class="logo">Focoya</a>
+
+    <nav class="nav">
+      <a href="#">Home</a>
+      <a href="#/" data-nav="explore" class="active">Explore</a>
+      <a href="#/my-rooms" data-nav="my">My Rooms</a>
+    </nav>
+
+    <div class="acct-wrap">
+      <button class="login-btn" data-open="login">Đăng nhập</button>
+
+      <button class="account" id="acct" aria-haspopup="menu" aria-expanded="false">
+        <span>SE</span>
+        <b>SE347</b>
+      </button>
+
+      <div class="menu" id="menu" role="menu" hidden>
+        <div class="menu-head">
+          <span>SE</span>
+          <div>
+            <b>SE347</b>
+            <small>se347@gmail.com</small>
+          </div>
+        </div>
+
+        <a href="#/my-rooms" role="menuitem">My Rooms</a>
+        <button role="menuitem" data-open="settings" data-tab="theme">Cài đặt</button>
+        <button role="menuitem" data-open="settings" data-tab="account">Tài khoản</button>
+        <hr>
+        <button role="menuitem" data-open="login">Đăng nhập</button>
+        <button role="menuitem" class="danger" data-placeholder="Đăng xuất">Đăng xuất</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" class="container"></main>
+
+  <div class="overlay" id="login" hidden>
+    <form class="login" id="login-form" novalidate>
+      <button type="button" class="x x-light" data-close aria-label="Đóng">×</button>
+
+      <h2>Chào mừng trở lại!</h2>
+      <p class="sub">Đăng nhập tài khoản vào Focoya</p>
+
+      <button type="button" class="google" data-placeholder="Đăng nhập Google">
+        <img src="assets/google.svg" alt="" width="16" height="16">
+        Google
+      </button>
+
+      <div class="or">
+        <span>HOẶC</span>
+      </div>
+
+      <label>
+        Email
+        <input type="email" placeholder="se347@gmail.com" required>
+      </label>
+
+      <label>
+        Mật khẩu
+        <span class="pw">
+          <input type="password" id="pw" placeholder="••••••••••••" required>
+          <button type="button" id="eye" aria-label="Hiện mật khẩu">◉</button>
+        </span>
+      </label>
+
+      <div class="row">
+        <label class="chk">
+          <input type="checkbox"> Ghi nhớ
+        </label>
+        <a href="#" data-placeholder="Quên mật khẩu">Quên mật khẩu?</a>
+      </div>
+
+      <button type="submit" class="primary-grad">Đăng nhập</button>
+
+      <p class="msg" id="login-msg" role="status"></p>
+
+      <p class="foot">
+        Chưa có tài khoản?
+        <a href="#" data-placeholder="Tạo tài khoản">Tạo tài khoản</a>
+      </p>
+    </form>
+  </div>
+
+  <div class="overlay" id="settings" hidden>
+    <div class="settings">
+      <aside>
+        <h3>⚙ Cài đặt</h3>
+        <button data-tab="theme">Chủ đề</button>
+        <button data-tab="stats">Thống kê</button>
+        <button data-tab="account">Tài khoản</button>
+        <button data-tab="help">Trợ giúp</button>
+      </aside>
+
+      <section id="settings-body"></section>
+
+      <button class="x" data-close aria-label="Đóng">×</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="data/rooms.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
