@@ -125,7 +125,7 @@ Mỗi user có **đúng 1** profile. Backend phải tạo profile **ngay khi use
 
 | Loại | Ai tạo | `owner_id` | `invite_code` | Ai vào được |
 |---|---|---|---|---|
-| `PUBLIC` | Hệ thống seed sẵn 4 phòng | `NULL` | `NULL` | Mọi người |
+| `PUBLIC` | `DataSeeder` seed sẵn 6 phòng (theo mock của FE) | `NULL` | `NULL` | Mọi người, kể cả khách chưa đăng nhập |
 | `PRIVATE` | User tự tạo | **Bắt buộc** | **Bắt buộc**, 6 ký tự | Người có mã mời |
 
 **Xóa mềm:** không xóa dòng, chỉ đặt `is_active = false`. Lý do: các `study_sessions` cũ vẫn trỏ tới phòng này; xóa thật sẽ lỗi khóa ngoại và mất lịch sử học.
@@ -138,8 +138,8 @@ Mỗi user có **đúng 1** profile. Backend phải tạo profile **ngay khi use
 | `owner_id` | uuid | | FK → `users`. `NULL` với public room |
 | `name` | varchar(100) | ✅ | Tên phòng |
 | `description` | text | | Mô tả, không giới hạn độ dài |
-| `theme_key` | varchar(50) | ✅ | Mã giao diện/tông màu, frontend tra ra tài nguyên (vd `rainy-cafe`) |
-| `scene_key` | varchar(50) | | Mã ảnh/animation nền |
+| `theme_key` | varchar(50) | ✅ | Tên theme đúng như FE hiển thị: `Study`, `Café`, `Nature`, `Gaming`, `Chill`. API trả ra với tên field `theme` |
+| `scene_key` | varchar(50) | | Đường dẫn ảnh nền có sẵn trong FE, vd `/room-assets/rainy.jpg`. API trả ra với tên field `image` |
 | `ambient_track_key` | varchar(50) | | Mã âm thanh nền (mưa, lửa trại...) |
 | `visibility` | varchar(10) | ✅ | `PUBLIC` hoặc `PRIVATE` |
 | `invite_code` | varchar(6) | | Mã mời, **UNIQUE**. PostgreSQL cho phép nhiều dòng cùng `NULL`, nên public room không bị lỗi trùng |

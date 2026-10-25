@@ -7,6 +7,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 // Bắt exception ném ra từ MỌI controller/service và đổi thành JSON ErrorResponse.
@@ -34,6 +35,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleBadJson(HttpMessageNotReadableException ex) {
         ErrorResponse body = new ErrorResponse(400, "Dữ liệu gửi lên không đúng định dạng JSON");
+        return ResponseEntity.status(400).body(body);
+    }
+
+    // Tham số trên URL sai kiểu, ví dụ GET /api/rooms/abc trong khi roomId phải là UUID.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        ErrorResponse body = new ErrorResponse(400, "Tham số '" + ex.getName() + "' không hợp lệ");
         return ResponseEntity.status(400).body(body);
     }
 }
