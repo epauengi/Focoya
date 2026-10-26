@@ -5,6 +5,7 @@ import com.lofi.studyroombackend.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -46,6 +47,9 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> {
             // Đăng ký, đăng nhập, refresh: chưa có token nên phải mở.
             auth.requestMatchers("/api/auth/**").permitAll();
+            // Explore + Preview: khách chưa đăng nhập vẫn xem được phòng (giống FE). Chỉ mở GET.
+            // "/api/rooms/{roomId}" chỉ khớp đúng 1 đoạn sau /rooms, nên /api/rooms/join/{code} vẫn cần đăng nhập.
+            auth.requestMatchers(HttpMethod.GET, "/api/rooms", "/api/rooms/{roomId}").permitAll();
             // File hợp đồng API của Tiên + Swagger UI (sau này).
             auth.requestMatchers("/openapi.yaml", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
             // Spring chuyển lỗi (400, 409...) sang /error để trả JSON. Không mở thì mọi lỗi đều biến thành 401.
