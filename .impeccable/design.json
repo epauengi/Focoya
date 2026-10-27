@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T00:00:00Z",
+  "title": "Design System: Focoya",
+  "extensions": {
+    "shadows": {
+      "account-menu": "0 18px 40px #1e1b4b26",
+      "settings-dialog": "0 25px 60px -12px rgba(0,0,0,0.7)"
+    },
+    "motion": {
+      "room-card": "transform .2s ease, background-color .2s ease",
+      "reducedMotion": "Room shell transitions and animations disabled for prefers-reduced-motion: reduce."
+    },
+    "breakpoints": {
+      "rooms-grid-tablet": "1000px",
+      "rooms-mobile": "640px",
+      "focus-toolbar": "480px"
+    },
+    "components": [
+      {
+        "name": "Room action",
+        "category": "button",
+        "refersTo": "room-action",
+        "html": "<button class=\"ds-action\">Vào phòng học</button>",
+        "css": ".ds-action{font:700 14px 'Manrope Variable',sans-serif;min-height:48px;padding:12px 22px;border:0;border-radius:11px;background:#1d4ed8;color:white;cursor:pointer}.ds-action:hover{background:#1e40af}.ds-action:focus-visible{outline:3px solid #1d4ed8;outline-offset:4px}"
+      },
+      {
+        "name": "Room search",
+        "category": "input",
+        "html": "<label class=\"ds-search\">Tìm phòng<input type=\"search\" placeholder=\"Tìm kiếm phòng học…\"></label>",
+        "css": ".ds-search{display:grid;gap:8px;font:14px 'Manrope Variable',sans-serif;color:#151b29}.ds-search input{font:inherit;min-height:46px;padding:0 14px;border:1px solid #ffffffb3;border-radius:12px;background:#ffffffb3;color:#151b29}.ds-search input:focus-visible{outline:2px solid #1d4ed8;outline-offset:3px}"
+      },
+      {
+        "name": "Room navigation",
+        "category": "navigation",
+        "html": "<nav class=\"ds-nav\" aria-label=\"Phòng học\"><a href=\"/\">Home</a><a href=\"/rooms\" aria-current=\"page\">Explore</a><a href=\"/my-rooms\">My Rooms</a></nav>",
+        "css": ".ds-nav{display:flex;gap:4px;padding:4px;border-radius:12px;background:#15122f0d;font:650 14px 'Manrope Variable',sans-serif}.ds-nav a{padding:10px 18px;border-radius:8px;color:#151b29;text-decoration:none}.ds-nav a[aria-current]{background:#1d4ed8;color:white}.ds-nav a:focus-visible{outline:3px solid #1d4ed8;outline-offset:4px}"
+      },
+      {
+        "name": "Theme filter",
+        "category": "chip",
+        "html": "<button class=\"ds-filter\" aria-pressed=\"true\">Nature</button>",
+        "css": ".ds-filter{font:650 14px 'Manrope Variable',sans-serif;min-height:44px;padding:9px 18px;border-radius:999px;border:1px solid #ffffffb3;background:#ffffff9c;color:#151b29;cursor:pointer}.ds-filter[aria-pressed=true]{background:#1d4ed8;border-color:#1d4ed8;color:white}.ds-filter:focus-visible{outline:3px solid #1d4ed8;outline-offset:4px}"
+      },
+      {
+        "name": "Room card",
+        "category": "card",
+        "refersTo": "room-card",
+        "html": "<a class=\"ds-card\" href=\"/rooms/1/preview\"><img src=\"/room-assets/rainy.jpg\" alt=\"Không gian Cozy Café\"><strong>Cozy Café</strong><span>12 online · demo</span></a>",
+        "css": ".ds-card{display:grid;grid-template-columns:1fr auto;gap:14px 10px;padding:10px;border:1px solid #ffffffb3;border-radius:16px;background:#ffffffa3;color:#151b29;text-decoration:none;font:14px 'Manrope Variable',sans-serif;transition:transform .2s ease}.ds-card img{grid-column:1/-1;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:11px}.ds-card strong{font-size:16px;font-weight:750}.ds-card span{font-size:11px;align-self:center}.ds-card:hover{transform:translateY(-4px);background:#ffffffe6}.ds-card:focus-visible{outline:3px solid #1d4ed8;outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-card{transition:none}}"
+      }
+    ],
+    "narrative": {
+      "overview": "Existing Landing/Auth identity retained. Room surfaces inherit FE TEST: pastel gallery, photographic focus environment, dark settings. No new brand identity.",
+      "keyCharacteristics": ["Scoped room styles", "Self-hosted Manrope Variable", "Demo data labelled", "Temporary client state"],
+      "dos": ["Preserve existing Landing/Auth", "Keep room styles scoped", "Document asset origins", "Maintain keyboard and mobile access"],
+      "donts": ["Claim backend or realtime integration", "Hoist room tokens to global scope", "Treat mock statistics as real activity"]
+    }
+  }
+}

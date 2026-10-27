@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router";
 import { Image } from "@/components/common/Image";
-import { isDemoAuthenticated } from "@/auth/demoSession";
+import { getSession, subscribeSession } from "@/auth/session";
 
 const features = [
   {
@@ -58,7 +58,8 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
-  const appPath = isDemoAuthenticated() ? "/dashboard" : "/login";
+  const session = useSyncExternalStore(subscribeSession, getSession);
+  const appPath = session.status === "anonymous" ? "/login" : "/dashboard";
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 100);

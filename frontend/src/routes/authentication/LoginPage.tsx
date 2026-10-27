@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router";
-import { startDemoSession } from "@/auth/demoSession";
+import { useLocation, useNavigate } from "react-router";
+import { login } from "@/auth/session";
 import { AuthLayout } from "../../components/auth/authlayout";
 import { InputField } from "../../components/auth/inputfield";
 import { PrimaryButton } from "../../components/auth/primarybutton";
@@ -8,13 +8,14 @@ import { Checkbox } from "../../components/auth/checkbox";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.email ?? "");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -26,11 +27,16 @@ export const LoginPage: React.FC = () => {
 
     // Trạng thái Loading state
     setIsLoading(true);
-    setTimeout(() => {
-      startDemoSession();
+    try {
+      await login(email, password, rememberMe);
+      const from = location.state?.from;
+      const target = typeof from === "string" && /^\/(rooms(?:\/|\?|$)|my-rooms(?:\?|$)|dashboard$)/.test(from) ? from : "/rooms";
+      navigate(target, { replace: true });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Đăng nhập thất bại. Vui lòng thử lại.");
+    } finally {
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 1500);
+    }
   };
 
   return (
@@ -71,7 +77,8 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Trạng thái Error state */}
-      {errorMessage && <div className="auth-error-alert">{errorMessage}</div>}
+      {location.state?.registered && <p role="status">Đăng ký thành công. Vui lòng đăng nhập.</p>}
+      {errorMessage && <div className="auth-error-alert" role="alert">{errorMessage}</div>}
 
       <form onSubmit={handleSubmit}>
         <InputField

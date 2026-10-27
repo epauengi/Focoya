@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { register } from '@/auth/session';
 import { AuthLayout } from '@/components/auth/authlayout';
 import { InputField } from '@/components/auth/inputfield';
 import { Checkbox } from '@/components/auth/checkbox';
@@ -7,6 +8,7 @@ import { PrimaryButton } from '@/components/auth/primarybutton';
 import '@/styles/auth.css';
 
 export const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,10 +27,18 @@ export const RegisterPage: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (formData.name.trim().length < 2 || formData.name.trim().length > 50) {
+      setError('Họ và tên phải từ 2 đến 50 ký tự.');
+      return;
+    }
+    if (formData.password.length < 8 || formData.password.length > 72 || !/[A-Za-z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
+      setError('Mật khẩu phải từ 8 đến 72 ký tự, gồm ít nhất một chữ cái và một chữ số.');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu xác nhận không khớp.');
       return;
@@ -40,16 +50,19 @@ export const RegisterPage: React.FC = () => {
     }
 
     setIsLoading(true);
-    // Giả lập gọi API đăng ký
-    setTimeout(() => {
+    try {
+      await register(formData.name, formData.email, formData.password);
+      navigate('/login', { replace: true, state: { registered: true, email: formData.email.trim() } });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại.');
+    } finally {
       setIsLoading(false);
-      alert('Đăng ký tài khoản thành công!');
-    }, 1000);
+    }
   };
 
   return (
     <AuthLayout title="Tạo tài khoản" subtitle="Tham gia Focoya ngay hôm nay">
-      {error && <div className="auth-error-alert">{error}</div>}
+      {error && <div className="auth-error-alert" role="alert">{error}</div>}
 
       <form onSubmit={handleSubmit}>
         <InputField
@@ -59,6 +72,7 @@ export const RegisterPage: React.FC = () => {
           placeholder="Nguyễn Văn A"
           value={formData.name}
           onChange={handleChange}
+          disabled={isLoading}
           required
         />
 
@@ -69,6 +83,7 @@ export const RegisterPage: React.FC = () => {
           placeholder="example@gmail.com"
           value={formData.email}
           onChange={handleChange}
+          disabled={isLoading}
           required
         />
 
@@ -79,6 +94,7 @@ export const RegisterPage: React.FC = () => {
           placeholder="••••••••••••"
           value={formData.password}
           onChange={handleChange}
+          disabled={isLoading}
           required
         />
 
@@ -89,6 +105,7 @@ export const RegisterPage: React.FC = () => {
           placeholder="••••••••••••"
           value={formData.confirmPassword}
           onChange={handleChange}
+          disabled={isLoading}
           required
         />
 
@@ -98,6 +115,7 @@ export const RegisterPage: React.FC = () => {
             id="agreeTerms"
             checked={formData.agreeTerms}
             onChange={handleChange}
+            disabled={isLoading}
           />
         </div>
 
