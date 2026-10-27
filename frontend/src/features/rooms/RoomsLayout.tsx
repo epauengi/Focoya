@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
-import { endDemoSession, isDemoAuthenticated } from "@/auth/demoSession";
+import { getSession, logout, subscribeSession } from "@/auth/session";
 import { RoomSettings, type SettingsTab } from "./RoomSettings";
 import "./rooms.css";
 
@@ -21,7 +21,8 @@ export function RoomsLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [wallpaper, setWallpaper] = useState("");
-  const [displayName, setDisplayName] = useState("SE347");
+  const { user } = useSyncExternalStore(subscribeSession, getSession);
+  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [notifications, setNotifications] = useState(true);
   const [autoStart, setAutoStart] = useState(false);
   const [settings, setSettings] = useState<SettingsTab | null>(null);
@@ -29,7 +30,7 @@ export function RoomsLayout() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menu = useRef<HTMLDetailsElement>(null);
   const inFocusRoom = /^\/rooms\/[^/]+\/?$/.test(pathname);
-  const authenticated = isDemoAuthenticated();
+  const authenticated = user !== null;
 
   const notify = useCallback((message: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -75,8 +76,8 @@ export function RoomsLayout() {
   const closeSettings = useCallback(() => setSettings(null), []);
 
   function signOut() {
-    endDemoSession();
-    navigate("/");
+    logout();
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -95,7 +96,7 @@ export function RoomsLayout() {
             <summary aria-label="Mở tài khoản và cài đặt"><span className="rooms-avatar">{displayName.slice(0, 2).toUpperCase()}</span><b>{displayName}</b></summary>
             <div className="rooms-account-menu">
               <strong>{displayName}</strong>
-              <small>{authenticated ? "Phiên đăng nhập demo" : "Khách · Chế độ demo"}</small>
+              <small>{user?.email}</small>
               <Link to="/my-rooms" onClick={() => { if (menu.current) menu.current.open = false; }}>My Rooms</Link>
               <button onClick={() => openSettings("theme")}>Cài đặt</button>
               <button onClick={() => openSettings("stats")}>Thống kê</button>
