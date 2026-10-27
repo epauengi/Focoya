@@ -51,9 +51,10 @@ async function request(path: string, init: RequestInit = {}) {
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      signal: init.signal ?? AbortSignal.timeout(15000),
+      signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
     });
-  } catch {
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
     throw new Error("Không thể kết nối máy chủ. Vui lòng thử lại.");
   }
   if (!response.ok) {

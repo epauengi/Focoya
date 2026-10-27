@@ -4,31 +4,34 @@ export type RoomTheme = typeof THEMES[number];
 export type Room = {
   id: string;
   name: string;
-  theme: Exclude<RoomTheme, "All Rooms">;
+  theme: string;
   online: number;
   maxSlots: number;
   image: string;
   description: string;
+  visibility: "PUBLIC" | "PRIVATE";
+  inviteCode: string | null;
 };
 
-// ponytail: mock catalog only; replace with the rooms API when backend integration begins.
-export const ROOMS: Room[] = [
-  { id: "1", name: "Cozy Café", theme: "Café", online: 12, maxSlots: 16, image: "/room-assets/rainy.jpg", description: "Một góc quán cà phê ấm cúng với tiếng nhạc jazz êm dịu và hương cà phê thơm ngát." },
-  { id: "2", name: "Sakura Garden", theme: "Nature", online: 8, maxSlots: 12, image: "/room-assets/autumn.png", description: "Cánh hoa anh đào rơi nhẹ trên con đường vắng lặng. Thanh bình và thư thái." },
-  { id: "3", name: "Space Station", theme: "Gaming", online: 20, maxSlots: 24, image: "/room-assets/midnight.png", description: "Trạm vũ trụ trong màn đêm tĩnh mịch, không gian lý tưởng cho các game thủ tập trung." },
-  { id: "4", name: "Study Corner", theme: "Study", online: 5, maxSlots: 10, image: "/room-assets/rainy.jpg", description: "Bàn học ngăn nắp với ánh đèn vàng dịu nhẹ, thích hợp cho những buổi học sâu." },
-  { id: "5", name: "Sunset Lounge", theme: "Chill", online: 15, maxSlots: 20, image: "/room-assets/sunset.jpg", description: "Bầu trời hoàng hôn rực rỡ, những giai điệu lo-fi chill và những câu chuyện nhẹ nhàng." },
-  { id: "6", name: "Forest Hideaway", theme: "Nature", online: 7, maxSlots: 10, image: "/room-assets/autumn.png", description: "Một căn nhà gỗ nhỏ ẩn mình giữa rừng cây lá đỏ mùa thu yên tĩnh." },
-];
-
-export function getRoom(id: string | undefined) {
-  return ROOMS.find((room) => room.id === id);
+export function isRoomId(id: string | undefined): id is string {
+  return typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
-export function filterRooms(theme: RoomTheme, query: string) {
-  const normalizedQuery = query.trim().toLocaleLowerCase("vi");
-  return ROOMS.filter((room) => (theme === "All Rooms" || room.theme === theme)
-    && room.name.toLocaleLowerCase("vi").includes(normalizedQuery));
+export function parseRoom(value: unknown): Room {
+  if (typeof value !== "object" || value === null) throw new Error("Dữ liệu phòng không hợp lệ.");
+  const room = value as Room;
+  if (!isRoomId(room.id) || typeof room.name !== "string" || !room.name.trim() ||
+      typeof room.theme !== "string" || typeof room.description !== "string" ||
+      !Number.isInteger(room.maxSlots) || room.maxSlots < 1 ||
+      !Number.isInteger(room.online) || room.online < 0 ||
+      (room.visibility !== "PUBLIC" && room.visibility !== "PRIVATE") ||
+      (room.inviteCode !== null && typeof room.inviteCode !== "string")) {
+    throw new Error("Dữ liệu phòng không hợp lệ.");
+  }
+  // Only use bundled room media; never interpolate arbitrary API URLs into CSS.
+  const image = typeof room.image === "string" && /^\/room-assets\/[a-z0-9_-]+\.(?:png|jpe?g|webp)$/i.test(room.image)
+    ? room.image : "/room-assets/rainy.jpg";
+  return { ...room, image };
 }
 
 export const TIMER_MODES = {
