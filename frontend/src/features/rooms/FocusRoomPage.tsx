@@ -2,13 +2,14 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useRoomPreferences } from './RoomsLayout';
 import {
-  getRoom,
   TIMER_MODES,
   remainingSeconds,
   formatCountdown,
-  type Room,
 } from './rooms';
 import './focus-room.css';
+import { useQuery } from '@tanstack/react-query';
+import { roomQuery } from './roomQueries';
+import { RoomQueryState } from './RoomQueryState';
 
 type TimerModeKey = keyof typeof TIMER_MODES;
 
@@ -26,7 +27,8 @@ function nextTimerMode(current: TimerModeKey): TimerModeKey {
 
 export function FocusRoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
-  const room: Room | undefined = getRoom(roomId);
+  const result = useQuery(roomQuery(roomId));
+  const room = result.data;
   const {
     wallpaper,
     displayName,
@@ -214,7 +216,9 @@ export function FocusRoomPage() {
     }
   };
 
-  // Missing or unknown room
+  if (result.isPending || result.isError) {
+    return <main className="rooms-container" id="room-main" tabIndex={-1}><RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} /></main>;
+  }
   if (!room) {
     return (
       <main className="focus-room focus-room--not-found" id="room-main" tabIndex={-1}>
@@ -255,7 +259,7 @@ export function FocusRoomPage() {
             <span className="focus-room__status-dot" aria-hidden="true" />
             <span>{room.name}</span>
             <span aria-hidden="true">·</span>
-            <span>{room.online} online (demo)</span>
+            <span>{room.theme}</span>
           </div>
         </div>
       </header>

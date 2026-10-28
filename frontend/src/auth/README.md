@@ -24,6 +24,6 @@ npm run test:rooms
 
 ## Giới hạn
 
-Backend hiện chỉ nhận bearer token JSON, chưa có cookie HttpOnly hoặc endpoint logout/revoke. Refresh token trong Web Storage có rủi ro XSS; logout chỉ xóa phiên trình duyệt hiện tại, không thu hồi JWT phía server. Chuyển sang HttpOnly cookie khi backend hỗ trợ. Dữ liệu phòng vẫn là demo hiện có; TSK-08 chỉ tích hợp Auth.
+Backend hiện chỉ nhận bearer token JSON, chưa có cookie HttpOnly hoặc endpoint logout/revoke. Refresh token trong Web Storage có rủi ro XSS; logout chỉ xóa phiên trình duyệt hiện tại, không thu hồi JWT phía server. Chuyển sang HttpOnly cookie khi backend hỗ trợ. Danh sách/chi tiết phòng dùng Room API từ TSK-13; xem `../features/rooms/README.md`.
 
 Bộ test tự động giả lập fetch theo hợp đồng Spring Boot; không thay thế kiểm thử end-to-end với backend thật.
