@@ -21,7 +21,7 @@ export function parseRoom(value: unknown): Room {
   if (typeof value !== "object" || value === null) throw new Error("Dữ liệu phòng không hợp lệ.");
   const room = value as Room;
   if (!isRoomId(room.id) || typeof room.name !== "string" || !room.name.trim() ||
-      typeof room.theme !== "string" || typeof room.description !== "string" ||
+      typeof room.theme !== "string" || (room.description !== null && typeof room.description !== "string") ||
       !Number.isInteger(room.maxSlots) || room.maxSlots < 1 ||
       !Number.isInteger(room.online) || room.online < 0 ||
       (room.visibility !== "PUBLIC" && room.visibility !== "PRIVATE") ||
@@ -31,7 +31,7 @@ export function parseRoom(value: unknown): Room {
   // Only use bundled room media; never interpolate arbitrary API URLs into CSS.
   const image = typeof room.image === "string" && /^\/room-assets\/[a-z0-9_-]+\.(?:png|jpe?g|webp)$/i.test(room.image)
     ? room.image : "/room-assets/rainy.jpg";
-  return { ...room, image };
+  return { ...room, image, description: room.description ?? "" };
 }
 
 export const TIMER_MODES = {
