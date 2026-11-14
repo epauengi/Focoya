@@ -11,6 +11,8 @@ for (const id of [undefined, "1", "missing", "../rooms", "550e8400e29b41d4a71644
 assert.deepEqual(parseRoom(room), room);
 assert.equal(parseRoom({ ...room, image: "javascript:alert(1)" }).image, "/room-assets/rainy.jpg");
 assert.equal(parseRoom({ ...room, theme: "New theme" }).theme, "New theme");
+assert.equal(parseRoom({ ...room, description: null }).description, "");
+assert.throws(() => parseRoom({ ...room, description: 42 }), /Dữ liệu phòng không hợp lệ/);
 for (const value of [null, {}, { ...room, id: "1" }, { ...room, maxSlots: -1 }, { ...room, online: "0" }, { ...room, visibility: "INVALID" }]) {
   assert.throws(() => parseRoom(value), /Dữ liệu phòng không hợp lệ/);
 }
