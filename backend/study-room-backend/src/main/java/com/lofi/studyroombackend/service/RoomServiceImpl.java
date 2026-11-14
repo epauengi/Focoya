@@ -7,6 +7,7 @@ import com.lofi.studyroombackend.entity.UserEntity;
 import com.lofi.studyroombackend.entity.enums.RoomVisibility;
 import com.lofi.studyroombackend.repository.RoomRepository;
 import com.lofi.studyroombackend.repository.UserRepository;
+import com.lofi.studyroombackend.realtime.PresenceRegistry;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,10 +33,13 @@ public class RoomServiceImpl implements RoomService {
     private final SecureRandom random = new SecureRandom();
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final PresenceRegistry presenceRegistry;
 
-    public RoomServiceImpl(RoomRepository roomRepository, UserRepository userRepository) {
+    public RoomServiceImpl(RoomRepository roomRepository, UserRepository userRepository,
+                           PresenceRegistry presenceRegistry) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
+        this.presenceRegistry = presenceRegistry;
     }
 
     @Override
@@ -139,9 +143,8 @@ public class RoomServiceImpl implements RoomService {
     }
 
     // Số người đang ở trong phòng là dữ liệu realtime -> giữ trong RAM (PresenceRegistry), KHÔNG lưu DB.
-    // TODO TSK-16: thay bằng presenceRegistry.countOnline(room.getId()). Tạm thời 0 (Excel TSK-12 cho phép).
     private int countOnline(RoomEntity room) {
-        return 0;
+        return presenceRegistry.countOnline(room.getId());
     }
 
     // Sinh mã 6 ký tự A-Z, 0-9. Có 36^6 ≈ 2 tỷ mã nên gần như không trùng,
