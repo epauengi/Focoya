@@ -10,6 +10,7 @@ import './focus-room.css';
 import { useQuery } from '@tanstack/react-query';
 import { roomQuery } from './roomQueries';
 import { RoomQueryState } from './RoomQueryState';
+import { RoomPresence } from './RoomPresence';
 
 type TimerModeKey = keyof typeof TIMER_MODES;
 
@@ -256,11 +257,12 @@ export function FocusRoomPage() {
         </Link>
         <div className="focus-room__meta">
           <div className="focus-room__badge">
-            <span className="focus-room__status-dot" aria-hidden="true" />
+            {/* Presence indicator belongs to the confirmed WebSocket connection below. */}
             <span>{room.name}</span>
             <span aria-hidden="true">·</span>
             <span>{room.theme}</span>
           </div>
+          <RoomPresence key={room.id} roomId={room.id} />
         </div>
       </header>
 
