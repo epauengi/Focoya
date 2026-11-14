@@ -647,7 +647,7 @@
   .focus-room__top { gap: 12px; padding-inline: 16px; }
   .focus-room__logo { background: transparent; border: 0; padding-inline: 0; font-size: 24px; }
   .focus-room__badge { flex-wrap: wrap; justify-content: end; padding: 8px 10px; gap: 5px; font-size: 11px; }
-  .focus-room__badge span:first-child { display: none; }
+  .focus-room__badge .focus-room__status-dot { display: none; }
   .focus-room__bottom { padding-inline: 16px; gap: 8px; }
   .focus-tasks__toggle { width: 44px; padding: 0; flex-shrink: 0; }
   .focus-tasks__toggle > span { display: none; }

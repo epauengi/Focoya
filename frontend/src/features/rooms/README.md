@@ -1,5 +1,7 @@
 # TSK-13 · Room API
 
+TSK-17: [Realtime Focus Room — cấu hình, lifecycle, kiểm thử](./REALTIME.md).
+
 - Dùng `VITE_API_BASE_URL` trong `frontend/.env.local` (xem `.env.example`); request đi qua `apiRequest()` của TSK-08, gồm Bearer/refresh/401 retry.
 - Backend thực tế: `GET /api/rooms?theme=Café&q=cozy` trả mảng `RoomResponse[]`; `GET /api/rooms/{UUID}` trả một phòng. Không dùng envelope/pagination trong OpenAPI cũ.
 - `roomQueries.ts`: query keys `['rooms', 'list', {theme, q}]` và `['rooms', 'detail', id]`; dùng chung detail cache cho Preview/Focus. Truyền AbortSignal để hủy request cũ.

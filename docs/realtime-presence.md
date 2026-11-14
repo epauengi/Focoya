@@ -26,9 +26,9 @@ Chỉ Backend; không triển khai giao diện, chat, timer, study sessions ho�
 ### Trình tự vào phòng
 
 1. CONNECT với access token; chờ CONNECTED.
-2. Subscribe `/user/queue/presence`, `/user/queue/errors` (nên chờ receipt xác nhận subscribe).
+2. Subscribe `/user/queue/presence`, `/user/queue/errors`. Simple broker hiện tại không hỗ trợ STOMP RECEIPT; không chờ receipt. Backend giữ thứ tự inbound (`setPreserveReceiveOrder(true)`, executor một thread), nên gửi JOIN sau hai SUBSCRIBE.
 3. SEND JOIN. Chờ snapshot xác nhận hoặc lỗi.
-4. Subscribe room topic, chờ receipt; SEND JOIN lần nữa để lấy snapshot mới nhất, tránh bỏ lỡ thay đổi giữa lần JOIN đầu và lúc subscription có hiệu lực. JOIN lặp không tăng online hoặc reset status.
+4. Subscribe room topic; SEND JOIN lần nữa ngay sau SUBSCRIBE theo thứ tự frame để lấy snapshot mới nhất, tránh bỏ lỡ thay đổi giữa lần JOIN đầu và lúc subscription có hiệu lực. Chờ application snapshot ACK của JOIN, không chờ STOMP RECEIPT. JOIN lặp không tăng online hoặc reset status.
 5. Khi nhận snapshot, thay toàn bộ danh sách hiện tại. Bỏ snapshot có `revision` nhỏ hơn bản đã áp dụng cho phòng đó. Giá trị `revision` có thể bằng nhau khi JOIN lặp.
 6. Khi rời phòng: SEND LEAVE, chờ xác nhận; unsubscribe room topic. Session đã leave không còn nhận topic phòng đó, kể cả quên unsubscribe.
 

@@ -1,0 +1,69 @@
+/* Focus identity retained: Manrope, translucent night surface; a quiet attendance light. */
+.focus-presence {
+  --presence-surface: #1b1e26;
+  --presence-text: #f1f5f9;
+  --presence-muted: #cbd5e1;
+  --presence-live: #86efac;
+  --presence-warning: #fcd34d;
+  position: relative;
+  color: var(--presence-text);
+  font-size: 13px;
+  text-align: left;
+}
+.focus-presence > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #ffffff29;
+  border-radius: 999px;
+  background: var(--presence-surface);
+  cursor: pointer;
+  list-style: none;
+}
+.focus-presence > summary::-webkit-details-marker { display: none; }
+.focus-presence > summary::after { content: '+'; margin-left: 8px; font-size: 18px; }
+.focus-presence[open] > summary::after { content: '−'; }
+.focus-presence__signal { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--presence-warning); }
+.focus-presence__signal[data-connected='true'] { background: var(--presence-live); }
+.focus-presence__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 5;
+  width: min(360px, calc(100vw - 40px));
+  max-height: min(60svh, 480px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  box-sizing: border-box;
+  border: 1px solid #ffffff29;
+  border-radius: 16px;
+  background: var(--presence-surface);
+  box-shadow: 0 16px 40px #0006;
+}
+.focus-presence__heading h2 { margin: 0 0 4px; font-size: 18px; font-weight: 750; letter-spacing: -0.025em; }
+.focus-presence__heading > span, .focus-presence__note { color: var(--presence-muted); line-height: 1.6; }
+.focus-presence__panel label { display: block; margin: 18px 0 8px; font-weight: 650; }
+.focus-presence__panel :is(input, select, button) { min-height: 44px; border: 1px solid #ffffff40; border-radius: 9px; padding: 8px 12px; color: inherit; background: transparent; font: inherit; }
+.focus-presence__panel select { width: 100%; background: var(--presence-surface); }
+.focus-presence__panel button { cursor: pointer; }
+.focus-presence__panel button:hover, .focus-presence > summary:hover { border-color: #ffffff80; background: #303540; }
+.focus-presence :is(summary, input, select, button):focus-visible { outline: 3px solid var(--presence-live); outline-offset: 3px; }
+.focus-presence__invite { display: flex; gap: 8px; }
+.focus-presence__invite input { width: 0; flex: 1; min-width: 0; text-transform: uppercase; }
+.focus-presence__members { list-style: none; padding: 0; margin: 16px 0 0; }
+.focus-presence__members li { display: flex; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid #ffffff1a; }
+.focus-presence__avatar { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #ffffff14; font-weight: 750; }
+.focus-presence__name { flex: 1; overflow-wrap: anywhere; min-width: 0; }
+.focus-presence__status { color: var(--presence-muted); font-size: 11px; flex-shrink: 0; }
+.focus-presence__error { color: var(--presence-warning); line-height: 1.6; }
+.focus-presence__actions { margin-top: 16px; }
+.focus-room__meta { flex-wrap: wrap; justify-content: flex-end; }
+.focus-room > .focus-room__top { z-index: 3; }
+@media (max-width: 640px) {
+  .focus-presence { width: 100%; }
+  .focus-presence > summary { justify-content: center; }
+  .focus-presence__panel { width: min(360px, calc(100vw - 40px)); }
+}

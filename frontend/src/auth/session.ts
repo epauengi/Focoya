@@ -147,6 +147,16 @@ export function ensureSession() {
   return refreshSession();
 }
 
+/** In-memory access token for authenticated transports; never persist it or put it in a URL. */
+export async function getAccessToken(): Promise<string> {
+  const version = generation;
+  await ensureSession();
+  if (version !== generation || state.status !== "authenticated" || !accessToken) {
+    throw new ApiError(401, "Vui lòng đăng nhập lại.");
+  }
+  return accessToken;
+}
+
 export function sessionRefreshDelay() {
   return Math.max(1000, expiresAt - Date.now() - 30000);
 }

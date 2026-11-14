@@ -90,6 +90,35 @@ describe("auth session unit & regression tests", () => {
     fetchHandler = null;
   });
 
+  describe("WebSocket access token", () => {
+    it("returns the in-memory token without persisting it", async () => {
+      const session = await loadFreshSession();
+      const token = createFakeJwt(3600);
+      fetchHandler = async () => jsonResponse({ accessToken: token, refreshToken: "refresh-only", user: mockUser });
+      await session.login("user@focoya.test", "secret123", false);
+      assert.equal(await session.getAccessToken(), token);
+      assert.equal(mockSessionStorage.getItem(STORAGE_KEY), "refresh-only");
+      assert.equal(mockLocalStorage.length, 0);
+    });
+
+    it("rejects anonymous sessions instead of connecting without a bearer", async () => {
+      const session = await loadFreshSession();
+      await assert.rejects(session.getAccessToken(), { status: 401 });
+    });
+
+    it("rejects a token request cancelled by logout during refresh", async () => {
+      const session = await loadFreshSession();
+      mockSessionStorage.setItem(STORAGE_KEY, "refresh-only");
+      let resolve;
+      fetchHandler = () => new Promise((done) => { resolve = done; });
+      const pending = session.getAccessToken();
+      session.logout();
+      resolve(jsonResponse({ accessToken: createFakeJwt(3600), refreshToken: "rotated", user: mockUser }));
+      await assert.rejects(pending, { status: 401 });
+      assert.equal(mockSessionStorage.length, 0);
+    });
+  });
+
   describe("register DTO & tokens", () => {
     it("sends sanitized registration DTO and does not store returned tokens", async () => {
       const session = await loadFreshSession();
