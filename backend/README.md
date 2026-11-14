@@ -41,3 +41,15 @@ cd study-room-backend
 ```
 
 Server sẽ chạy tại `http://localhost:8080`.
+
+## Realtime (TSK-16)
+
+WebSocket STOMP: `/ws-room`. JWT trong header STOMP `CONNECT`; presence lưu RAM, không lưu DB.
+
+Contract cho TSK-17: [realtime-presence.md](../docs/realtime-presence.md).
+
+Kiểm thử realtime không cần PostgreSQL:
+
+```powershell
+.\mvnw.cmd "-Dtest=PresenceRegistryTest,RoomOnlineCountTest,RoomPresenceServiceTest,RoomApiSecurityRegressionTest,WebSocket*Test,PresenceWebSocketIntegrationTest,JwtTokenProviderTest" test
+```
