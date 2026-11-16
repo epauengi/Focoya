@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface StudySessionRepository extends JpaRepository<StudySessionEntity, UUID> {
@@ -16,4 +17,8 @@ public interface StudySessionRepository extends JpaRepository<StudySessionEntity
             SELECT COALESCE(SUM(s.durationMinutes), 0L) FROM StudySessionEntity s
             WHERE s.user.id = :userId AND s.status = :status""")
     long sumDurationMinutes(@Param("userId") UUID userId, @Param("status") StudySessionStatus status);
+
+    // Phiên mới nhất của 1 user theo trạng thái. Dùng để tìm phiên IN_PROGRESS (phiên đang chạy).
+    // SELECT * FROM study_sessions WHERE user_id = ? AND status = ? ORDER BY started_at DESC LIMIT 1
+    Optional<StudySessionEntity> findFirstByUserIdAndStatusOrderByStartedAtDesc(UUID userId, StudySessionStatus status);
 }
