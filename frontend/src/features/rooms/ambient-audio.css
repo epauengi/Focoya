@@ -1,0 +1,45 @@
+.focus-tools { position: relative; }
+.focus-tools .focus-tools__dock { backdrop-filter: none; }
+
+.focus-audio summary { list-style: none; cursor: pointer; }
+.focus-audio summary::-webkit-details-marker { display: none; }
+.focus-audio summary[data-playing='true'] { background: #2563eb; }
+.focus-audio[open] summary { background: #31446d; }
+
+.focus-audio__panel {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  right: 0;
+  width: min(284px, calc(100vw - 32px));
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #1b1e26;
+  color: #f1f5f9;
+  box-shadow: 0 16px 32px #080b1266;
+  font-size: 13px;
+}
+
+.focus-audio__panel h2 { margin: 0; font-size: 16px; }
+.focus-audio__panel p { margin: -8px 0 0; color: #c8d4e8; }
+.focus-audio__panel label { display: grid; gap: 4px; }
+.focus-audio__panel select, .focus-audio__panel button {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #65738d;
+  border-radius: 11px;
+  background: #242e43;
+  color: inherit;
+}
+.focus-audio__panel select { width: 100%; color-scheme: dark; }
+.focus-audio__volume > span { display: flex; justify-content: space-between; }
+.focus-audio__volume input { width: 100%; min-height: 44px; accent-color: #93b4ff; }
+.focus-audio__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.focus-audio__actions button { cursor: pointer; font-weight: 700; }
+.focus-audio__actions button:first-child, .focus-audio__actions button[aria-pressed='true'] { background: #1d4ed8; }
+.focus-audio__actions button:hover { border-color: #c1d4ff; }
+.focus-audio :focus-visible { outline: 2px solid #b9d1ff; outline-offset: 2px; }
+
