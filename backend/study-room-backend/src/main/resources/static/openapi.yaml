@@ -303,10 +303,13 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /study-sessions:
+  /study-sessions/start:
     post:
       tags: [Study]
       summary: Bắt đầu phiên học
+      description: >-
+        startedAt là giờ server. Nếu user còn phiên chưa kết thúc, phiên đó được chốt trước
+        (theo luật của /study-sessions/finish) rồi mới tạo phiên mới.
       operationId: startStudySession
       security:
         - bearerAuth: []
@@ -317,8 +320,8 @@ paths:
             schema:
               $ref: "#/components/schemas/StartStudySessionRequest"
       responses:
-        "200":
-          description: Phiên học đã được bắt đầu
+        "201":
+          description: Phiên học đã được bắt đầu (status IN_PROGRESS)
           content:
             application/json:
               schema:
@@ -327,7 +330,33 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
+  /study-sessions/finish:
+    post:
+      tags: [Study]
+      summary: Kết thúc phiên học đang chạy
+      description: >-
+        Không có body. Server tự tìm phiên IN_PROGRESS của user trong JWT và tự tính thời lượng
+        theo giờ server (tối đa 60 phút). Đủ 5 phút: COMPLETED, xpEarned = số phút (1 phút = 1 XP).
+        Chưa đủ 5 phút: CANCELLED, xpEarned = 0.
+      operationId: finishStudySession
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Phiên học đã được chốt (status COMPLETED hoặc CANCELLED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /study-sessions:
     get:
       tags: [Study]
       summary: Lịch sử học
@@ -351,34 +380,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
 
   /study-sessions/{sessionId}:
-    patch:
-      tags: [Study]
-      summary: Kết thúc hoặc cập nhật phiên học
-      operationId: updateStudySession
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SessionId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateStudySessionRequest"
-      responses:
-        "200":
-          description: Phiên học đã được cập nhật
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StudySession"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
     get:
       tags: [Study]
       summary: Chi tiết phiên học
@@ -730,14 +731,6 @@ components:
         roomId:
           type: string
           format: uuid
-
-    UpdateStudySessionRequest:
-      type: object
-      required: [status]
-      properties:
-        status:
-          type: string
-          enum: [COMPLETED, CANCELLED]
 
     StudySession:
       type: object

@@ -161,17 +161,23 @@ Index: `idx_rooms_owner_id`, dùng để tìm các phòng do một user tạo.
 **Vòng đời một session** (Excel TSK-20):
 
 ```text
-POST /api/study-sessions/start
+POST /api/study-sessions/start      body: { "roomId": "..." }
+   → còn phiên cũ đang chạy: chốt phiên đó trước (theo luật của finish bên dưới)
    → tạo dòng mới: status = IN_PROGRESS, started_at = GIỜ SERVER
 
-POST /api/study-sessions/finish
+POST /api/study-sessions/finish     không có body, server tự tìm phiên đang chạy của user
    → ended_at = giờ server
-   → duration_minutes = ended_at - started_at       (server tự tính)
-   → đủ tối thiểu 5 phút:  status = COMPLETED, xp_earned = server tự tính
-   → không hợp lệ / bỏ dở: status = CANCELLED, xp_earned = 0
+   → duration_minutes = ended_at - started_at       (server tự tính, tối đa 60 phút)
+   → đủ tối thiểu 5 phút:  status = COMPLETED, xp_earned = duration_minutes (1 phút = 1 XP)
+   → chưa đủ 5 phút:       status = CANCELLED, xp_earned = 0
+   → phiên COMPLETED: cộng xp_earned vào gamification_profiles.total_xp trong CÙNG transaction
 ```
 
 > **Chống gian lận:** client **không gửi** thời lượng hay XP. Mọi thời gian đều lấy theo đồng hồ server.
+>
+> **Mỗi user chỉ có 1 phiên `IN_PROGRESS`.** DB không tự chặn được luật này, nên `start` và `finish` khóa dòng user (`SELECT ... FOR UPDATE`) để hai request gửi cùng lúc phải xếp hàng.
+>
+> **Trần 60 phút:** quên bấm kết thúc rồi hôm sau mới bấm thì phiên đó chỉ được tính 60 phút (Pomodoro dài nhất FE cho đặt).
 
 | Cột | Kiểu | Bắt buộc | Ý nghĩa |
 |---|---|---|---|
@@ -181,7 +187,7 @@ POST /api/study-sessions/finish
 | `status` | varchar(20) | ✅ | `IN_PROGRESS` / `COMPLETED` / `CANCELLED` |
 | `started_at` | timestamptz | ✅ | Lúc bấm start (giờ server) |
 | `ended_at` | timestamptz | | Lúc kết thúc. `NULL` khi đang chạy |
-| `duration_minutes` | int | | Số phút học thực tế. `NULL` khi chưa kết thúc |
+| `duration_minutes` | int | | Số phút học được tính (tối đa 60). `NULL` khi chưa kết thúc |
 | `xp_earned` | int | ✅ | XP nhận được (1 phút = 1 XP). Lưu theo từng session để leaderboard tuần tính bằng `SUM(xp_earned)` |
 | `created_at` | timestamptz | ✅ | Hibernate tự điền |
 
