@@ -102,4 +102,5 @@ Room cards: 16px; image corners: 11px; search: 12px; room actions: 11px. Filter 
 - Mark attendance/statistics as demo. Preferences and tasks are temporary client state, not synchronized user data.
 - Retain keyboard labels, visible focus, 44px utility targets, scrollable modal content and useful empty/not-found states.
 - Focus Room uses the supplied scene artwork, a dark legibility overlay and sparse scene-specific decoration. Reduced motion keeps only the static scene. The cloud control opens a dark popover for locally controlled ambience; nothing plays by default.
+- Focus Room shows up to three confirmed avatar seats below the clock, then a `+N` button for the full list. Each seat has a name and a written study status; the current user has a blue ring and a text label. Join/leave transitions use opacity and translate for 200 ms, absent under reduced motion.
 - Do not imply that the local Pomodoro or task list persists, synchronizes study history, or awards XP.

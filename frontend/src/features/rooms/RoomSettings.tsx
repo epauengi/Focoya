@@ -335,7 +335,7 @@ export function RoomSettings(props: {
                 </div>
 
                 <p className="room-settings-truth-note">
-                  Âm thanh chuông báo và điều chỉnh âm lượng chưa khả dụng trong bản thử nghiệm này (chưa tích hợp Web Audio API).
+                  Chuông báo Pomodoro chưa khả dụng. Âm thanh nền có bộ điều khiển riêng ở nút hình mây trong phòng.
                 </p>
               </div>
             </section>
@@ -616,7 +616,7 @@ export function RoomSettings(props: {
                           <span className="room-settings-faq-badge">4</span> Trạng thái STUDYING / BREAK nghĩa là gì?
                         </summary>
                         <p className="room-settings-faq-answer">
-                          Trạng thái này phản ánh chế độ làm việc (STUDYING) hoặc nghỉ ngơi (BREAK) theo chu kỳ Pomodoro cục bộ hiện tại của bạn.
+                          Đang học, Đang nghỉ và Chưa bắt đầu là trạng thái bạn chọn trong bảng thành viên. Trạng thái hiển thị sau khi máy chủ xác nhận, không tự đổi theo Pomodoro.
                         </p>
                       </details>
 
@@ -625,7 +625,7 @@ export function RoomSettings(props: {
                           <span className="room-settings-faq-badge">5</span> Cách bật âm thanh nền thiên nhiên (Ambient)?
                         </summary>
                         <p className="room-settings-faq-answer">
-                          Bản thử nghiệm giao diện chưa tích hợp phát tệp âm thanh thực tế. Nút điều khiển âm thanh hiện chỉ mang tính chất minh họa thao tác giao diện.
+                          Trong phòng học, mở nút hình mây rồi chọn Phát. Bạn có thể đổi âm thanh, chỉnh âm lượng hoặc tắt tiếng; rời phòng sẽ dừng âm thanh.
                         </p>
                       </details>
 

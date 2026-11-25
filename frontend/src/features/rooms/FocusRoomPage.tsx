@@ -237,8 +237,9 @@ export function FocusRoomPage() {
   const scene = resolveRoomScene(room, wallpaper);
 
   return (
+    <RoomPresence key={room.id} roomId={room.id} maxSlots={room.maxSlots}>{(presence, seats) => (
     <main className="focus-room" id="room-main">
-      <RoomScene key={room.id} {...scene} />
+      <RoomScene {...scene} />
       <div className="focus-room__overlay" aria-hidden="true" />
 
       {/* Screen reader only announcement for Pomodoro completion */}
@@ -258,7 +259,7 @@ export function FocusRoomPage() {
             <span aria-hidden="true">·</span>
             <span>{room.theme}</span>
           </div>
-          <RoomPresence key={room.id} roomId={room.id} />
+          {presence}
         </div>
       </header>
 
@@ -388,6 +389,7 @@ export function FocusRoomPage() {
             </button>
           </div>
         )}
+        {seats}
       </section>
 
       {/* Bottom Bar: Tasks & Dock */}
@@ -564,5 +566,6 @@ export function FocusRoomPage() {
         </div>
       </footer>
     </main>
+    )}</RoomPresence>
   );
 }

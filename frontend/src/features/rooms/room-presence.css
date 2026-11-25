@@ -44,7 +44,7 @@
   box-shadow: 0 16px 40px #0006;
 }
 .focus-presence__heading h2 { margin: 0 0 4px; font-size: 18px; font-weight: 750; letter-spacing: -0.025em; }
-.focus-presence__heading > span, .focus-presence__note { color: var(--presence-muted); line-height: 1.6; }
+.focus-presence__heading > span { color: var(--presence-muted); line-height: 1.6; }
 .focus-presence__panel label { display: block; margin: 18px 0 8px; font-weight: 650; }
 .focus-presence__panel :is(input, select, button) { min-height: 44px; border: 1px solid #ffffff40; border-radius: 9px; padding: 8px 12px; color: inherit; background: transparent; font: inherit; }
 .focus-presence__panel select { width: 100%; background: var(--presence-surface); }
@@ -55,12 +55,89 @@
 .focus-presence__invite input { width: 0; flex: 1; min-width: 0; text-transform: uppercase; }
 .focus-presence__members { list-style: none; padding: 0; margin: 16px 0 0; }
 .focus-presence__members li { display: flex; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid #ffffff1a; }
-.focus-presence__avatar { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #ffffff14; font-weight: 750; }
+.focus-presence__avatar { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: #303a52; overflow: hidden; font-weight: 750; }
 .focus-presence__name { flex: 1; overflow-wrap: anywhere; min-width: 0; }
 .focus-presence__status { color: var(--presence-muted); font-size: 11px; flex-shrink: 0; }
 .focus-presence__error { color: var(--presence-warning); line-height: 1.6; }
 .focus-presence__actions { margin-top: 16px; }
-.focus-room__meta { flex-wrap: wrap; justify-content: flex-end; }
+.focus-room__meta { min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+.focus-room__badge { overflow-wrap: anywhere; }
+
+.focus-seats {
+  --seat-width: min(91px, calc((100vw - 64px) / 4));
+  --seat-gap: 8px;
+  position: relative;
+  min-height: 88px;
+  max-width: 100%;
+}
+.focus-seats__list {
+  display: flex;
+  justify-content: center;
+  gap: var(--seat-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.focus-seat {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 3px;
+  width: var(--seat-width);
+  min-width: 0;
+  padding: 8px 3px;
+  border-radius: 12px;
+  background: #15122fca;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.focus-seat__portrait { position: relative; }
+.focus-seat__portrait[data-self='true'] { border-radius: 50%; outline: 2px solid #93b4ff; outline-offset: 1px; }
+.focus-seat__avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #303a52;
+}
+.focus-seat__name {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.focus-seat__status { font-size: 10px; color: #e2e8f0; }
+.focus-seat__status[data-status='STUDYING'] { color: #bbf7d0; }
+.focus-seat__status[data-status='BREAK'] { color: #fde68a; }
+.focus-seat--more { align-content: center; }
+.focus-seat--more button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #a7bde66f;
+  border-radius: 50%;
+  background: #293458;
+  color: #fff;
+  font-weight: 750;
+  cursor: pointer;
+}
+.focus-seat--more button:hover { background: #344777; }
+.focus-seat--more button:focus-visible { outline: 2px solid #b9d1ff; outline-offset: 2px; }
+.focus-seat[data-entering='true'] { animation: seat-in 200ms ease-out both; }
+.focus-seat--leaving {
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--seat-width) / 2 + var(--seat-offset) * (var(--seat-width) + var(--seat-gap)));
+  pointer-events: none;
+  animation: seat-out 200ms ease-in both;
+}
+@keyframes seat-in { from { opacity: 0.25; transform: translateY(5px); } }
+@keyframes seat-out { to { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .focus-seat--leaving { display: none; } }
 .focus-room > .focus-room__top { z-index: 3; }
 @media (max-width: 640px) {
   .focus-presence { width: 100%; }
