@@ -1,0 +1,71 @@
+.rooms-shell:has(.profile-page) { background-attachment: scroll; }
+.profile-page { overflow-wrap: anywhere; }
+.profile-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.profile-panel { border: 1px solid var(--rooms-line); border-radius: 16px; background: #f9faff; }
+.profile-panel h2 { font-size: clamp(21px, 2.5vw, 28px); line-height: 1.2; font-weight: 800; letter-spacing: -.025em; }
+.profile-panel h3 { font-size: 15px; font-weight: 750; }
+.profile-muted { color: var(--rooms-muted); }
+.profile-cover {
+  height: clamp(112px, 13vw, 164px);
+  border-radius: 15px 15px 0 0;
+  background: #24253c url('/room-assets/midnight.png') center 44% / cover;
+}
+.profile-identity, .profile-study { padding: clamp(20px, 3vw, 32px); }
+.profile-portrait {
+  display: grid;
+  place-items: center;
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin-top: calc(-38px - clamp(20px, 3vw, 32px));
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 4px solid #f9faff;
+  border-radius: 20px;
+  background: var(--rooms-blue);
+  color: white;
+  font-size: 24px;
+  font-weight: 800;
+}
+.profile-identity-line, .profile-xp-line { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; }
+.profile-identity-line > div { min-width: 0; }
+.profile-identity-line p { margin-top: 5px; font-size: 14px; }
+.profile-level { border-radius: 20px; padding: 5px 10px; background: #e4eafa; color: #1e40af; font-size: 13px; font-weight: 750; }
+.profile-bio { margin-block: 24px; }
+.profile-bio p { margin-top: 6px; white-space: pre-wrap; font-size: 15px; line-height: 1.65; }
+.profile-xp { margin-block: 20px 26px; padding: 18px; border-radius: 12px; background: #e5eafa; font-size: 13px; font-variant-numeric: tabular-nums; }
+.profile-xp progress { display: block; width: 100%; height: 10px; margin-block: 13px 9px; border: 0; border-radius: 20px; overflow: hidden; background: #c7d2ed; accent-color: var(--rooms-blue); }
+.profile-xp progress::-webkit-progress-bar { background: #c7d2ed; }
+.profile-xp progress::-webkit-progress-value { background: var(--rooms-blue); border-radius: 20px; }
+.profile-xp progress::-moz-progress-bar { background: var(--rooms-blue); border-radius: 20px; }
+.profile-stats div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 12px; border-bottom: 1px solid #d9e0f0; padding-block: 11px; }
+.profile-stats div:last-child { padding-bottom: 0; border-bottom: 0; }
+.profile-stats dt { color: var(--rooms-muted); font-size: 14px; }
+.profile-stats dd { font-size: 16px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.profile-form { display: grid; gap: 14px; padding-top: 18px; border-top: 1px solid #d9e0f0; }
+.profile-fields, .profile-avatars { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.profile-fields { display: grid; gap: 16px; }
+.profile-field { display: grid; gap: 6px; }
+.profile-field label, .profile-avatars legend { font-size: 14px; font-weight: 750; }
+.profile-field .profile-muted, #profile-bio-count { font-size: 13px; font-weight: 600; }
+.profile-field :is(input,textarea) { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #7987a5; border-radius: 12px; background: white; color: inherit; font: inherit; caret-color: var(--rooms-blue); }
+.profile-field textarea { resize: vertical; }
+.profile-field textarea::placeholder { color: var(--rooms-muted); }
+.profile-field textarea:focus-visible, .profile-choice:has(input:focus-visible) { outline: 3px solid var(--rooms-blue); outline-offset: 4px; }
+.profile-field [aria-invalid='true'] { border-color: #a82538; }
+.profile-choices { display: grid; grid-template-columns: repeat(4, minmax(0, 52px)); gap: 8px; margin-top: 8px; }
+.profile-choice { display: grid; place-items: center; min-height: 48px; border: 2px solid transparent; border-radius: 11px; cursor: pointer; }
+.profile-choice svg { width: 40px; height: 40px; border-radius: 8px; }
+.profile-choice:has(input:checked) { border-color: var(--rooms-blue); }
+.profile-choice:has(input:disabled) { cursor: not-allowed; }
+.profile-default-avatar { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.profile-default-avatar input { accent-color: var(--rooms-blue); }
+.profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-secondary { min-height: 48px; padding-inline: 18px; border: 1px solid #7987a5; border-radius: 11px; font-size: 14px; font-weight: 750; }
+.profile-secondary:hover:not(:disabled) { background: #e5eafa; }
+.profile-error, .profile-success, .profile-form > [role='status'] { font-size: 14px; }
+.profile-error { color: #a82538; }
+.profile-success { color: #047857; }
+.profile-success:not(:empty) { margin-top: 12px; }
+.profile-form > [role='status']:empty { margin-top: -14px; }
+@media (max-width: 760px) { .profile-grid { grid-template-columns: 1fr; } }

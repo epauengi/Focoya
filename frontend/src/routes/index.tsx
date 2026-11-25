@@ -3,6 +3,7 @@ import { RoomsLayout } from "@/features/rooms/RoomsLayout";
 import { ExplorePage, MyRoomsPage } from "@/features/rooms/ExplorePage";
 import { RoomPreviewPage } from "@/features/rooms/RoomPreviewPage";
 import { FocusRoomPage } from "@/features/rooms/FocusRoomPage";
+import { ProfilePage } from "@/features/profile/ProfilePage";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 
 import { RootLayout } from "@/layouts/RootLayout";
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
           { path: "/rooms/:roomId/preview", element: <RoomPreviewPage /> },
           { path: "/rooms/:roomId", element: <FocusRoomPage /> },
           { path: "/my-rooms", element: <MyRoomsPage /> },
+          { path: "/profile", element: <ProfilePage /> },
         ],
       },
     ],

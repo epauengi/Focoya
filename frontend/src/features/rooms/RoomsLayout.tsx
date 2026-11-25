@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { getSession, logout, subscribeSession } from "@/auth/session";
+import { ProfileAvatar } from "../profile/ProfileAvatar";
+import { profileQuery } from "../profile/profileQueries";
 import { RoomSettings, type SettingsTab } from "./RoomSettings";
 import "./rooms.css";
 
@@ -22,7 +25,10 @@ export function RoomsLayout() {
   const navigate = useNavigate();
   const [wallpaper, setWallpaper] = useState("");
   const { user } = useSyncExternalStore(subscribeSession, getSession);
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  // Observe saved profile changes without adding a profile request to room routes.
+  const { data: profile } = useQuery({ ...profileQuery(user?.id), enabled: false });
+  const displayName = profile?.displayName ?? user?.displayName ?? "";
+  const avatarKey = profile ? profile.avatarKey : user?.avatarKey;
   const [notifications, setNotifications] = useState(true);
   const [autoStart, setAutoStart] = useState(false);
   const [settings, setSettings] = useState<SettingsTab | null>(null);
@@ -93,14 +99,14 @@ export function RoomsLayout() {
         <div className="rooms-account-wrap">
           {!authenticated && <Link className="rooms-login" to="/login">Đăng nhập</Link>}
           <details className="rooms-account" ref={menu}>
-            <summary aria-label="Mở tài khoản và cài đặt"><span className="rooms-avatar">{displayName.slice(0, 2).toUpperCase()}</span><b>{displayName}</b></summary>
+            <summary aria-label="Mở tài khoản và cài đặt"><ProfileAvatar className="rooms-avatar" avatarKey={avatarKey} displayName={displayName} /><b>{displayName}</b></summary>
             <div className="rooms-account-menu">
               <strong>{displayName}</strong>
               <small>{user?.email}</small>
               <Link to="/my-rooms" onClick={() => { if (menu.current) menu.current.open = false; }}>My Rooms</Link>
               <button onClick={() => openSettings("theme")}>Cài đặt</button>
               <button onClick={() => openSettings("stats")}>Thống kê</button>
-              <button onClick={() => openSettings("account")}>Tài khoản</button>
+              <Link to="/profile" onClick={() => { if (menu.current) menu.current.open = false; }}>Hồ sơ</Link>
               <button onClick={() => openSettings("help")}>Trợ giúp</button>
               {authenticated ? <button className="rooms-danger" onClick={signOut}>Đăng xuất</button> : <Link to="/login">Đăng nhập</Link>}
             </div>
@@ -116,9 +122,8 @@ export function RoomsLayout() {
         onNotificationsChange={setNotifications}
         autoStart={autoStart}
         onAutoStartChange={setAutoStart}
-        displayName={displayName}
-        onDisplayNameChange={setDisplayName}
         onClose={closeSettings}
+        onOpenProfile={() => { closeSettings(); navigate("/profile"); }}
         onSignOut={signOut}
         notify={notify}
       />}

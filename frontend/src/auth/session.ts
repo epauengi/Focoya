@@ -24,6 +24,7 @@ export class ApiError extends Error {
 }
 
 export const getSession = () => state;
+export const getSessionGeneration = () => generation;
 export function subscribeSession(listener: () => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
@@ -162,11 +163,13 @@ export function sessionRefreshDelay() {
 }
 
 /** Paths are relative to VITE_API_BASE_URL; never forward bearer tokens to arbitrary URLs. */
-export async function apiRequest(path: string, init: RequestInit = {}) {
+export async function apiRequest(path: string, init: RequestInit = {}, expectedUserId?: string) {
   if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Đường dẫn API không hợp lệ.");
-  await ensureSession();
-  if (!accessToken) throw new ApiError(401, "Vui lòng đăng nhập lại.");
   const version = generation;
+  const sameUser = () => expectedUserId === undefined || (version === generation && state.user?.id === expectedUserId);
+  await ensureSession();
+  if (!accessToken || !sameUser()) throw new ApiError(401, "Vui lòng đăng nhập lại.");
+  const requestVersion = generation;
   const sentToken = accessToken;
   const send = () => {
     const headers = new Headers(init.headers);
@@ -177,13 +180,13 @@ export async function apiRequest(path: string, init: RequestInit = {}) {
     return await send();
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 401) throw error;
-    if (version !== generation) throw error;
+    if (requestVersion !== generation || !sameUser()) throw error;
     if (sentToken === accessToken) await refreshSession();
-    if (!accessToken || version !== generation) throw error;
+    if (!accessToken || requestVersion !== generation || !sameUser()) throw error;
     try {
       return await send();
     } catch (retryError) {
-      if (version === generation && retryError instanceof ApiError && retryError.status === 401) logout();
+      if (requestVersion === generation && sameUser() && retryError instanceof ApiError && retryError.status === 401) logout();
       throw retryError;
     }
   }

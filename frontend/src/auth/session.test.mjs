@@ -119,6 +119,16 @@ describe("auth session unit & regression tests", () => {
     });
   });
 
+  it("does not send account-scoped requests under a different user's session", async () => {
+    const session = await loadFreshSession();
+    fetchHandler = async () => jsonResponse({ accessToken: createFakeJwt(), refreshToken: "test-refresh", user: mockUser });
+    await session.login(mockUser.email, "secret123", false);
+    let requests = 0;
+    fetchHandler = async () => { requests++; return jsonResponse({}); };
+    await assert.rejects(session.apiRequest("/users/me", { method: "PUT" }, "previous-user"), { status: 401 });
+    assert.equal(requests, 0);
+  });
+
   describe("register DTO & tokens", () => {
     it("sends sanitized registration DTO and does not store returned tokens", async () => {
       const session = await loadFreshSession();

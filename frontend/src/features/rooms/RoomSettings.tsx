@@ -56,9 +56,8 @@ export function RoomSettings(props: {
   onNotificationsChange: (value: boolean) => void;
   autoStart: boolean;
   onAutoStartChange: (value: boolean) => void;
-  displayName: string;
-  onDisplayNameChange: (value: string) => void;
   onClose: () => void;
+  onOpenProfile: () => void;
   onSignOut: () => void;
   notify: (message: string) => void;
 }) {
@@ -70,15 +69,13 @@ export function RoomSettings(props: {
     onNotificationsChange,
     autoStart,
     onAutoStartChange,
-    displayName,
-    onDisplayNameChange,
     onClose,
+    onOpenProfile,
     onSignOut,
     notify,
   } = props;
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
-  const [localDisplayName, setLocalDisplayName] = useState(displayName);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -142,17 +139,6 @@ export function RoomSettings(props: {
       return !wallpaper || wallpaper === '' || wallpaper === '/room-assets/bg.png';
     }
     return wallpaper === opt.src;
-  };
-
-  const handleAccountSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = localDisplayName.trim();
-    if (!trimmed) {
-      pushStatus('Tên hiển thị không được để trống.');
-      return;
-    }
-    onDisplayNameChange(trimmed);
-    pushStatus('Đã cập nhật tên hiển thị tạm thời');
   };
 
   return (
@@ -536,88 +522,20 @@ export function RoomSettings(props: {
               <div className="room-settings-panel-header">
                 <h3 className="room-settings-title">Tài khoản người dùng</h3>
                 <p className="room-settings-desc">
-                  Quản lý thông tin cá nhân và múi giờ học tập
+                  Cập nhật tên hiển thị, giới thiệu và ảnh đại diện trong hồ sơ.
                 </p>
               </div>
 
               <div className="room-settings-account-card">
-                <form className="room-settings-form" onSubmit={handleAccountSubmit}>
-                  <div className="room-settings-form-row">
-                    <label htmlFor="room-settings-email" className="room-settings-input-label">
-                      Địa chỉ E-mail (Demo cố định)
-                    </label>
-                    <input
-                      id="room-settings-email"
-                      type="email"
-                      value="se347@gmail.com"
-                      readOnly
-                      className="room-settings-input room-settings-input-readonly"
-                    />
-                  </div>
-
-                  <div className="room-settings-form-row">
-                    <label htmlFor="room-settings-name" className="room-settings-input-label">
-                      Tên hiển thị (Lưu tạm trong phiên)
-                    </label>
-                    <input
-                      id="room-settings-name"
-                      type="text"
-                      value={localDisplayName}
-                      onChange={(e) => setLocalDisplayName(e.target.value)}
-                      className="room-settings-input"
-                      placeholder="Nhập tên hiển thị..."
-                    />
-                  </div>
-
-                  <div className="room-settings-form-row">
-                    <label htmlFor="room-settings-fullname" className="room-settings-input-label">
-                      Họ và tên đệm
-                    </label>
-                    <input
-                      id="room-settings-fullname"
-                      type="text"
-                      value="UIT Student"
-                      readOnly
-                      className="room-settings-input room-settings-input-readonly"
-                    />
-                  </div>
-
-                  <div className="room-settings-form-row">
-                    <label htmlFor="room-settings-tz" className="room-settings-input-label">
-                      Múi giờ học tập
-                    </label>
-                    <select
-                      id="room-settings-tz"
-                      defaultValue="Asia/Ho_Chi_Minh"
-                      disabled
-                      aria-disabled="true"
-                      className="room-settings-select room-settings-select-readonly"
-                    >
-                      <option value="Asia/Ho_Chi_Minh">Việt Nam (GMT+7)</option>
-                    </select>
-                  </div>
-
-                  <div className="room-settings-form-actions">
-                    <button type="submit" className="room-settings-btn-primary">
-                      Lưu thay đổi
-                    </button>
-                    <button
-                      type="button"
-                      className="room-settings-btn-danger"
-                      onClick={() => {
-                        onSignOut();
-                        onClose();
-                      }}
-                    >
-                      Đăng xuất
-                    </button>
-                  </div>
-                </form>
+                <div className="room-settings-form-actions">
+                  <button type="button" className="room-settings-btn-primary" onClick={onOpenProfile}>
+                    Mở hồ sơ
+                  </button>
+                  <button type="button" className="room-settings-btn-danger" onClick={onSignOut}>
+                    Đăng xuất
+                  </button>
+                </div>
               </div>
-
-              <p className="room-settings-demo-note">
-                Tài khoản dùng thử cho đồ án SE347. Các thay đổi chỉ có hiệu lực tạm thời trong phiên làm việc hiện tại và không lưu vào máy chủ.
-              </p>
             </section>
           )}
 
