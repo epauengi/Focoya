@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test:rooms": "node --experimental-strip-types src/features/rooms/rooms.test.mjs",
-    "test:realtime": "node --test src/features/rooms/realtime.test.mjs"
+    "test:realtime": "node --test src/features/rooms/realtime.test.mjs",
+    "test:profile": "node --test src/features/profile/profile.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.1.1",

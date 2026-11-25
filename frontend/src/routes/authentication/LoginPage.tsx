@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password, rememberMe);
       const from = location.state?.from;
-      const target = typeof from === "string" && /^\/(rooms(?:\/|\?|$)|my-rooms(?:\?|$)|dashboard$)/.test(from) ? from : "/rooms";
+      const target = typeof from === "string" && /^\/(rooms(?:\/|\?|$)|(?:my-rooms|profile)(?:\?|$)|dashboard$)/.test(from) ? from : "/rooms";
       navigate(target, { replace: true });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Đăng nhập thất bại. Vui lòng thử lại.");
