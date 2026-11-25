@@ -11,6 +11,9 @@ import { useQuery } from '@tanstack/react-query';
 import { roomQuery } from './roomQueries';
 import { RoomQueryState } from './RoomQueryState';
 import { RoomPresence } from './RoomPresence';
+import { RoomScene } from './RoomSceneLayer';
+import { AmbientAudioControls } from './AmbientAudioControls';
+import { resolveRoomScene } from './roomScene';
 
 type TimerModeKey = keyof typeof TIMER_MODES;
 
@@ -193,10 +196,6 @@ export function FocusRoomPage() {
   };
 
   // Tool actions
-  const handleAmbientClick = () => {
-    notify('Âm thanh tự nhiên đang tạm tắt trong bản demo.');
-  };
-
   const handleTipsClick = () => {
     notify('Mẹo: Dành 25 phút tập trung sâu, sau đó đứng dậy vận động nhẹ 5 phút.');
   };
@@ -235,14 +234,11 @@ export function FocusRoomPage() {
     );
   }
 
-  const bgImage = wallpaper || room.image || '/room-assets/rainy.jpg';
+  const scene = resolveRoomScene(room, wallpaper);
 
   return (
-    <main
-      className="focus-room"
-      style={{ backgroundImage: `url('${bgImage}')` }}
-      id="room-main"
-    >
+    <main className="focus-room" id="room-main">
+      <RoomScene key={room.id} {...scene} />
       <div className="focus-room__overlay" aria-hidden="true" />
 
       {/* Screen reader only announcement for Pomodoro completion */}
@@ -526,15 +522,7 @@ export function FocusRoomPage() {
         {/* Tools Dock Corner */}
         <div className="focus-tools">
           <div className="focus-tools__dock">
-            <button
-              type="button"
-              className="focus-tool"
-              aria-label="Âm thanh tự nhiên"
-              title="Âm thanh tự nhiên"
-              onClick={handleAmbientClick}
-            >
-              <img src="/room-assets/cloud.svg" alt="" width="20" height="20" />
-            </button>
+            <AmbientAudioControls key={room.id} defaultPreset={scene.preset} />
             <Link
               to="/rooms"
               className="focus-tool"

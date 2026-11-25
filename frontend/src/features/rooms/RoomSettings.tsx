@@ -17,6 +17,7 @@ const WALLPAPERS: WallpaperOption[] = [
   { id: 'rainy', name: 'Mưa', src: '/room-assets/rainy.jpg', preview: '/room-assets/rainy.jpg' },
   { id: 'autumn', name: 'Mùa thu', src: '/room-assets/autumn.png', preview: '/room-assets/autumn.png' },
   { id: 'midnight', name: 'Đêm', src: '/room-assets/midnight.png', preview: '/room-assets/midnight.png' },
+  { id: 'sunset', name: 'Hoàng hôn', src: '/room-assets/sunset.jpg', preview: '/room-assets/sunset.jpg' },
 ];
 
 const DAYS_OF_WEEK = [

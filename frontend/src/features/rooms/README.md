@@ -1,3 +1,11 @@
+# Focus Room — TSK-18
+
+- `/rooms/:roomId` giữ đồng hồ, Pomodoro cục bộ, danh sách việc và chế độ toàn màn hình. Không gọi StudySession API.
+- Cảnh ưu tiên hình nền được chọn, rồi ảnh phòng nhận từ API. Xem [bảng ánh xạ cảnh và âm thanh](../../../public/room-assets/README.md). Ảnh lỗi thử ảnh theo cảnh rồi `bg.png`.
+- Nút hình mây mở bộ điều khiển âm thanh. Web Audio chỉ khởi tạo khi nhấn Phát; đổi preset điều chỉnh một luồng noise, không phát chồng. Rời phòng hoặc đăng xuất đóng AudioContext. Chỉ mức âm lượng được lưu (`focoya:room-audio:volume:v1`), không gửi qua mạng và không tự phát sau khi tải lại.
+- `prefers-reduced-motion` ẩn hiệu ứng trang trí ngay khi đổi cài đặt hệ điều hành, không ảnh hưởng âm thanh.
+- Kiểm tra: mở bốn cảnh; thử hình nền ghi đè, phát/tạm dừng, tắt tiếng, đổi preset, chỉnh âm lượng bằng phím mũi tên, tải lại, rời phòng và giảm chuyển động. Thử thêm Pomodoro, danh sách việc và toàn màn hình. Test Node: `node --test src/features/rooms/roomScene.test.mjs src/features/rooms/ambientAudio.test.mjs`.
+
 # TSK-13 · Room API
 
 TSK-17: [Realtime Focus Room — cấu hình, lifecycle, kiểm thử](./REALTIME.md).

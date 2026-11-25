@@ -8,6 +8,7 @@ export type Room = {
   online: number;
   maxSlots: number;
   image: string;
+  usesFallbackImage?: true;
   description: string;
   visibility: "PUBLIC" | "PRIVATE";
   inviteCode: string | null;
@@ -29,9 +30,13 @@ export function parseRoom(value: unknown): Room {
     throw new Error("Dữ liệu phòng không hợp lệ.");
   }
   // Only use bundled room media; never interpolate arbitrary API URLs into CSS.
-  const image = typeof room.image === "string" && /^\/room-assets\/[a-z0-9_-]+\.(?:png|jpe?g|webp)$/i.test(room.image)
-    ? room.image : "/room-assets/rainy.jpg";
-  return { ...room, image, description: room.description ?? "" };
+  const hasImage = typeof room.image === "string" && /^\/room-assets\/[a-z0-9_-]+\.(?:png|jpe?g|webp)$/i.test(room.image);
+  return {
+    ...room,
+    image: hasImage ? room.image : "/room-assets/rainy.jpg",
+    ...(!hasImage && { usesFallbackImage: true as const }),
+    description: room.description ?? "",
+  };
 }
 
 export const TIMER_MODES = {

@@ -7,9 +7,7 @@
   flex-direction: column;
   justify-content: space-between;
   background-color: #121026;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  isolation: isolate;
   color: #ffffff;
   font-family: var(--font-manrope);
   overflow-x: hidden;
@@ -24,7 +22,32 @@
   z-index: 1;
 }
 
-.focus-room > *:not(.focus-room__overlay) {
+.focus-scene, .focus-scene__effect {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.focus-scene img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.focus-scene .ambient-rain-line { animation-duration: 1.9s; }
+.focus-scene .ambient-leaf { background: #cf844c99; }
+.focus-scene__effect[data-effect='library'] {
+  background: radial-gradient(ellipse at 24% 30%, #ffbd782f, transparent 55%);
+}
+.focus-scene__effect[data-effect='ocean'] {
+  background: radial-gradient(ellipse at 68% 50%, #ffd59e35, transparent 45%);
+  animation: room-tide 14s ease-in-out infinite alternate;
+}
+@keyframes room-tide {
+  from { opacity: .32; transform: translateX(-2%); }
+  to { opacity: .8; transform: translateX(2%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-scene__effect { display: none; }
+  .focus-room *, .focus-room *::before, .focus-room *::after { animation: none !important; transition: none !important; }
+}
+
+.focus-room > :not(.focus-room__overlay, .focus-scene) {
   position: relative;
   z-index: 2;
 }
