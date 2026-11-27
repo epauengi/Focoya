@@ -1,6 +1,51 @@
-# Focus Room — TSK-18
+# Focus Room - TSK-18
 
-- `/rooms/:roomId` giữ đồng hồ, Pomodoro cục bộ, danh sách việc và chế độ toàn màn hình. Không gọi StudySession API.
+## TSK-21 — Pomodoro End-to-End
+
+### API và vòng đời
+
+- Tái sử dụng `apiRequest`, JWT refresh, room queries, profile query và một controller STOMP. Contract thực tế theo Java/OpenAPI và [PR #25](https://github.com/epauengi/Focoya/pull/25), không theo mô tả StudySession cũ trong TASK.md.
+- Focus gọi `POST /study-sessions/start` với đúng `{roomId}`; chỉ countdown sau response `IN_PROGRESS` hợp lệ, đúng user/room. API base đã có `/api`. Response được parse runtime; lưu ID ở memory để đối chiếu, không phải quyền nhắm endpoint finish.
+- End/hết giờ gọi `POST /study-sessions/finish` không body. Chỉ chấp nhận terminal response đúng ID/user/room. Không gửi duration, timestamp hoặc XP. Không retry network/5xx, không dùng mutation retry; client auth chỉ replay một lần sau 401 bị từ chối trước nghiệp vụ.
+- Máy trạng thái: idle → starting → running → paused/resumed → finishing → completed; lỗi chưa rõ commit giữ uncertain. Guard đồng bộ chặn nhấn liên tiếp; countdown theo deadline monotonic, kiểm tra wall elapsed khi tab ngủ và visibility, không trừ từng tick.
+- Pause chỉ ngừng countdown, **backend vẫn tính thời gian pause**. Resume dùng phiên cũ, không POST start mới. End Session chốt thời gian. Reset/đổi mode xác nhận rồi finish phiên Focus trước. Short/Long hoàn toàn local, không XP hay StudySession.
+- Cài đặt: mặc định 25/5/15 phút, số nguyên Focus 5–60, Short 1–15, Long 5–30; phản hồi lỗi từng trường, khôi phục mặc định. Chỉ áp dụng idle/phiên sau. Lưu preferences không nhạy cảm ở `focoya:pomodoro:preferences:v1`, không lưu token/session ownership/XP.
+- AutoStart: Focus finish xác nhận rồi Short; hết break mới start Focus khi đã JOIN phòng. Không chờ bù nhiều chu kỳ sau tab ngủ, không tự chuyển sau uncertain. Long chỉ chọn thủ công, không thêm scheduler.
+- Presence: Focus running/resume STUDYING; break running/resume BREAK; pause/end/reset IDLE. Không STATUS mỗi giây. Xem [REALTIME.md](./REALTIME.md).
+- Toast luôn là fallback. Notification chỉ khi được hỗ trợ và permission granted; xin quyền qua thao tác bật thông báo trong Settings, không tự hỏi lúc tải. Denied không hỏi lặp. Một thông báo cho mỗi lần hết timer; chỉ đưa XP sau backend xác nhận. Không bảo đảm thông báo sau đóng tab/trình duyệt; ambience độc lập.
+- Start có thể chốt phiên cũ nên cũng invalidate `profileQuery(userId)`. Finish xác nhận invalidate cùng query, kể cả observer inactive. Profile lần mở sau fetch lại XP/level/tổng giờ từ API, không cộng optimistic hoặc sửa streak/badge.
+
+### An toàn và giới hạn backend
+
+- Web Locks giữ khóa theo user suốt workflow, cả pause/uncertain. Tab khác không tự takeover. Trình duyệt không hỗ trợ Web Locks từ chối Focus có ghi nhận; break vẫn chạy. Không dùng localStorage flag làm khóa. Khóa chỉ cùng origin/browser; không bảo vệ thiết bị khác, origin khác, API trực tiếp hoặc thay đổi server.
+- Capture user/generation/room/operation; response cũ không thay UI/cache tài khoản mới. Unmount không tự finish; POST đang chờ giữ khóa đến khi settle. Không tự khôi phục ownership sau refresh.
+- 400/401/403 và start404 là từ chối rõ ràng, hiển thị hướng dẫn. Network/timeout/5xx/dữ liệu sai/ID sai là uncertain. Finish404 chỉ nói không tìm thấy active session, **không chứng minh phiên đã hoàn thành**. Không tự POST lại; rời phòng khi uncertain cần xác nhận cảnh báo.
+- Điều hướng trong ứng dụng chặn khi còn workflow, cho End rồi Leave, chờ kết quả. Logout chủ động cũng hỏi kết thúc trước. `beforeunload` chỉ cảnh báo khi trình duyệt hỗ trợ; refresh/đóng tab/mất mạng không bảo đảm finish. Không sendBeacon/fetch từ cleanup. Start sau đó có thể chốt phiên cũ theo luật server.
+- Backend không pause/resume, active lookup, idempotency key hoặc finish theo session ID. Phát hiện response ID lệch chỉ ngăn trình bày sai, **không thể ngăn finish đã chạm phiên khác trên thiết bị khác**. Follow-up nhỏ: endpoint finish có expectedSessionId và kiểm tra nguyên tử, active lookup; idempotency key nếu cần phục hồi request. Không thể loại thời gian pause khỏi XP bằng contract hiện tại.
+
+### Kiểm thử TSK-21
+
+```sh
+node --test src/features/rooms/pomodoro.test.mjs src/features/rooms/studySession.test.mjs src/features/rooms/pomodoroPreferences.test.mjs
+npm run test:realtime
+npm run test:profile
+npm run test:rooms
+npm run lint
+npm run build
+```
+
+Backend/DB test + hai tài khoản cần kiểm tra trước review:
+1. Đăng nhập, vào public room, đợi JOIN; cấu hình thời lượng, mở Pomodoro. Start đúng một POST; response IN_PROGRESS, avatar tab khác STUDYING.
+2. Pause/resume không start mới; IDLE/STUDYING xác nhận bằng snapshot. Ngắt/kết nối socket khi timer chạy: countdown không mất, intent mới nhất hồi phục, không STATUS mỗi tick.
+3. End trước 5 phút: CANCELLED, 0 XP, phút thực tế. Chạy đủ ≥5 phút không chỉnh timestamp server: COMPLETED, phút/XP từ response; Profile fetch mới, level/giờ đúng API.
+4. Short/Long không có StudySession request, BREAK/IDLE đúng. AutoStart đợi finish rồi mới nghỉ, hết nghỉ mới start tiếp, không catch-up nhiều phiên.
+5. Quyền notification default/granted/denied/unsupported; toast fallback; một thông báo/lần hết giờ. Test click dồn, request chậm/mất mạng/5xx/404/ID lệch, logout/room switch trong request; uncertain không replay.
+6. Hai tab cùng user: tab sau không takeover; browser không Web Locks từ chối focus, break vẫn dùng. Refresh/đóng tab cảnh báo, không giả khôi phục phiên.
+7. Giữ ambience, scenes, tasks, fullscreen, Live Clock. Kiểm tra bàn phím, reduced motion, viewport 375/768/1024/1366; validation/readable notices không đẩy controls khỏi màn hình.
+
+Mock tests/browser fixtures không thay thế E2E Spring Boot/PostgreSQL thật. Không đánh dấu TASK.md/Sheets hoàn thành trước review.
+
+- `/rooms/:roomId` giữ đồng hồ, Pomodoro tích hợp StudySession, danh sách việc tạm và chế độ toàn màn hình. Countdown vẫn ở client; máy chủ quyết định thời gian ghi nhận và XP.
 - Cảnh ưu tiên hình nền được chọn, rồi ảnh phòng nhận từ API. Xem [bảng ánh xạ cảnh và âm thanh](../../../public/room-assets/README.md). Ảnh lỗi thử ảnh theo cảnh rồi `bg.png`.
 - Nút hình mây mở bộ điều khiển âm thanh. Web Audio chỉ khởi tạo khi nhấn Phát; đổi preset điều chỉnh một luồng noise, không phát chồng. Rời phòng hoặc đăng xuất đóng AudioContext. Chỉ mức âm lượng được lưu (`focoya:room-audio:volume:v1`), không gửi qua mạng và không tự phát sau khi tải lại.
 - `prefers-reduced-motion` ẩn hiệu ứng trang trí ngay khi đổi cài đặt hệ điều hành, không ảnh hưởng âm thanh.

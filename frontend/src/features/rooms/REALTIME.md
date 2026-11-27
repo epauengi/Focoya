@@ -17,7 +17,10 @@ Contract: [`docs/realtime-presence.md`](../../../../docs/realtime-presence.md). 
 - Mở Focus Room sau khi đăng nhập. Nút thành viên cạnh tên phòng hiển thị trạng thái kết nối, danh sách từ server, chọn `Đang học` / `Đang nghỉ` / `Chưa bắt đầu`.
 - Phòng riêng bị `FORBIDDEN`: mở bảng thành viên, nhập mã mời 6 ký tự. Mã chỉ giữ trong component, không ghi storage/URL. Backend quyết định quyền và sức chứa.
 - `Ngắt kết nối` dừng reconnect; `Kết nối lại` lấy access token hiện tại. Rời route/unmount dọn subscription và socket.
-- Pomodoro vẫn local. Không gửi timer, task hoặc command mỗi giây; trạng thái học chỉ gửi khi người dùng chọn, khôi phục sau reconnect.
+- Countdown Pomodoro chạy ở client; phiên Focus được ghi qua StudySession REST. Không gửi timer/task hay command mỗi giây.
+- `useTimerPresence()` dùng chính controller của `RoomPresence`: Focus xác nhận Start/Resume gửi `STUDYING`; nghỉ chạy/tiếp tục gửi `BREAK`; pause/finish/reset gửi `IDLE`. Khi timer không điều khiển, giữ chọn trạng thái thủ công. Trong workflow timer, select thủ công bị khóa.
+- `setTimerStatus()` giữ intent riêng với snapshot. Snapshot server vẫn quyết định avatar; snapshot đến không phát STATUS phản hồi. Cùng intent không gửi lặp; reconnect gửi intent mới nhất sau JOIN/resync, không hồi phục trạng thái timer cũ. Trạng thái là chung cho các tab của cùng user, không riêng từng timer.
+- Mất socket không dừng phiên đã xác nhận hoặc countdown. Cảnh báo kết nối hiện diện; chỉ mở phiên Focus mới sau khi có snapshot xác nhận chính user trong phòng. Không mở STOMP connection thứ hai.
 
 ## Lifecycle
 
@@ -51,4 +54,4 @@ Kiểm tra thủ công với hai tài khoản/tab và DB test riêng:
 
 Tham khảo [giới hạn receipt của Spring simple broker](https://docs.spring.io/spring-framework/reference/6.2/web/websocket/stomp/handle-annotations.html).
 
-Presence backend chỉ hỗ trợ một JVM. Không thay đổi Preview/Explore, REST contract, Pomodoro hoặc các tính năng ngoài TSK-17.
+Presence backend chỉ hỗ trợ một JVM. TSK-21 bổ sung đồng bộ intent Pomodoro, không thay đổi REST/STOMP contract hay quyền truy cập. Xem [Pomodoro và giới hạn backend](./README.md#tsk-21--pomodoro-end-to-end).

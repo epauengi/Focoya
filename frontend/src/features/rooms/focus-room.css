@@ -1,4 +1,19 @@
 /* Scoped focus room styles - all prefixed with .focus-room / .focus-* */
+.focus-timer__state, .focus-timer__help, .focus-timer__notice { max-width: 58ch; margin: 12px auto; line-height: 1.6; text-wrap: pretty; }
+.focus-timer__state { font-size: 14px; color: #f1f3f9; }
+.focus-timer__help { font-size: 14px; color: #e4e5f1; }
+.focus-timer__notice, .focus-timer__leave { padding: 14px 18px; border-radius: 12px; background: #1b1e26; color: #f1f5f9; font-size: 15px; }
+.focus-timer__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.focus-timer .focus-timer__help, .focus-timer .focus-timer__state { margin-block: 0; }
+.focus-room .focus-timer { gap: 12px; }
+.focus-room .focus-room__center { gap: 12px; }
+.focus-timer__leave { max-width: 58ch; margin: 16px auto; }
+.focus-room button:disabled { opacity: .55; cursor: not-allowed; }
+.focus-room button:focus-visible, .focus-room a:focus-visible { outline: 3px solid #93c5fd; outline-offset: 4px; }
+.focus-timer__digits { font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .focus-timer__help, .focus-timer__notice, .focus-timer__leave { margin-inline: 12px; }
+}
 .focus-room {
   position: relative;
   width: 100%;

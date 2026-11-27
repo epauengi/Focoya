@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import { PomodoroSettings } from './PomodoroSettings';
+import {
+  getNotificationPermissionState,
+  requestNotificationPermission,
+  type NotificationPermissionState,
+  type PomodoroDurations,
+} from './pomodoroPreferences';
 import './settings.css';
 
 // ponytail: temporary client state; wire to REST API when backend ready.
 
-export type SettingsTab = 'theme' | 'stats' | 'account' | 'help';
+export type SettingsTab = 'theme' | 'timer' | 'stats' | 'account' | 'help';
 
 interface WallpaperOption {
   id: string;
@@ -57,6 +64,9 @@ export function RoomSettings(props: {
   onNotificationsChange: (value: boolean) => void;
   autoStart: boolean;
   onAutoStartChange: (value: boolean) => void;
+  durations: PomodoroDurations;
+  onDurationsChange: (next: PomodoroDurations) => void;
+  timerPending?: boolean;
   onClose: () => void;
   onOpenProfile: () => void;
   onSignOut: () => void;
@@ -70,6 +80,9 @@ export function RoomSettings(props: {
     onNotificationsChange,
     autoStart,
     onAutoStartChange,
+    durations,
+    onDurationsChange,
+    timerPending = false,
     onClose,
     onOpenProfile,
     onSignOut,
@@ -78,12 +91,66 @@ export function RoomSettings(props: {
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState>(() => getNotificationPermissionState());
+  const [requestingPermission, setRequestingPermission] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const pushStatus = (msg: string) => {
     setStatusMessage(msg);
     notify(msg);
   };
+
+  async function handleNotificationsToggle() {
+    if (requestingPermission) return;
+    const next = !notifications;
+    onNotificationsChange(next);
+    if (!next) {
+      pushStatus('Đã tắt thông báo');
+      return;
+    }
+
+    const current = getNotificationPermissionState();
+    setNotificationPermission(current);
+    if (current === 'default') {
+      setRequestingPermission(true);
+      try {
+        const nextPermission = await requestNotificationPermission();
+        setNotificationPermission(nextPermission);
+        if (nextPermission === 'granted') {
+          pushStatus('Đã bật thông báo hệ thống và trong ứng dụng');
+        } else if (nextPermission === 'denied') {
+          pushStatus('Thông báo trình duyệt bị chặn; chỉ hiển thị trong ứng dụng');
+        } else {
+          pushStatus('Đã bật thông báo trong ứng dụng');
+        }
+      } finally {
+        setRequestingPermission(false);
+      }
+      return;
+    }
+
+    if (current === 'denied') {
+      pushStatus('Thông báo trình duyệt đang bị chặn; chỉ hiển thị trong ứng dụng');
+      return;
+    }
+
+    if (current === 'unsupported') {
+      pushStatus('Đã bật thông báo trong ứng dụng (trình duyệt không hỗ trợ thông báo hệ thống)');
+      return;
+    }
+
+    pushStatus('Đã bật thông báo');
+  }
+
+  const notificationGuidance =
+    notificationPermission === 'granted'
+      ? 'Đã cấp quyền thông báo hệ thống.'
+      : notificationPermission === 'denied'
+        ? 'Quyền thông báo trình duyệt đang bị chặn. Hãy bật lại trong cài đặt trang web; thông báo trong ứng dụng vẫn hiển thị.'
+        : notificationPermission === 'default'
+          ? 'Chưa cấp quyền thông báo hệ thống. Bật công tắc để trình duyệt hỏi quyền.'
+          : 'Trình duyệt không hỗ trợ thông báo hệ thống; thông báo trong ứng dụng vẫn hoạt động.';
 
   useEffect(() => {
     if (!statusMessage) return;
@@ -184,6 +251,14 @@ export function RoomSettings(props: {
             </button>
             <button
               type="button"
+              aria-pressed={activeTab === 'timer'}
+              className={`room-settings-tab-btn ${activeTab === 'timer' ? 'room-settings-tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('timer')}
+            >
+              Hẹn giờ
+            </button>
+            <button
+              type="button"
               aria-pressed={activeTab === 'stats'}
               className={`room-settings-tab-btn ${activeTab === 'stats' ? 'room-settings-tab-btn--active' : ''}`}
               onClick={() => setActiveTab('stats')}
@@ -259,16 +334,24 @@ export function RoomSettings(props: {
                     <span className="room-settings-toggle-hint">
                       Hiển thị thông báo khi một phiên tập trung kết thúc
                     </span>
+                    <span
+                      className={`room-settings-toggle-guidance${
+                        notificationPermission === 'denied' || notificationPermission === 'unsupported'
+                          ? ' room-settings-toggle-guidance--warn'
+                          : ''
+                      }`}
+                    >
+                      {notificationGuidance}
+                    </span>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={notifications}
+                    disabled={requestingPermission}
                     className="room-settings-switch"
                     onClick={() => {
-                      const next = !notifications;
-                      onNotificationsChange(next);
-                      pushStatus(next ? 'Đã bật thông báo' : 'Đã tắt thông báo');
+                      void handleNotificationsToggle();
                     }}
                     aria-label="Bật hoặc tắt thông báo hoàn thành phiên"
                   >
@@ -280,15 +363,19 @@ export function RoomSettings(props: {
                   <div className="room-settings-toggle-text">
                     <span className="room-settings-toggle-label">Bộ hẹn giờ tự động</span>
                     <span className="room-settings-toggle-hint">
-                      Bộ hẹn giờ tự động khởi động khi kết thúc phân đoạn
+                      {timerPending
+                        ? 'Đang tạm khóa khi bộ hẹn giờ đang chạy hoặc xử lý.'
+                        : 'Bộ hẹn giờ tự động khởi động khi kết thúc phân đoạn'}
                     </span>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={autoStart}
+                    disabled={timerPending}
                     className="room-settings-switch"
                     onClick={() => {
+                      if (timerPending) return;
                       const next = !autoStart;
                       onAutoStartChange(next);
                       pushStatus(next ? 'Đã bật tự động chuyển phiên' : 'Đã tắt tự động chuyển phiên');
@@ -339,6 +426,15 @@ export function RoomSettings(props: {
                 </p>
               </div>
             </section>
+          )}
+
+          {activeTab === 'timer' && (
+            <PomodoroSettings
+              durations={durations}
+              onDurationsChange={onDurationsChange}
+              disabled={timerPending}
+              onStatus={pushStatus}
+            />
           )}
 
           {activeTab === 'stats' && (
@@ -598,7 +694,7 @@ export function RoomSettings(props: {
                           <span className="room-settings-faq-badge">2</span> Hoàn thành phiên nhưng không nhận được XP?
                         </summary>
                         <p className="room-settings-faq-answer">
-                          Hệ thống hiện là bản thử nghiệm giao diện (Mock UI) của đề tài SE347, chưa kết nối máy chủ cơ sở dữ liệu nên tính năng điểm kinh nghiệm và bảng xếp hạng chưa hoạt động.
+                          Máy chủ chỉ cấp XP cho phiên Focus ghi nhận từ 5 phút, tối đa 60 phút; mỗi phút được ghi nhận tương ứng 1 XP. Break không có XP. Tạm dừng đồng hồ không dừng thời gian máy chủ. Kết quả chưa xác nhận không được coi là đã lưu; xem thông báo của Pomodoro và hồ sơ sau khi kết thúc.
                         </p>
                       </details>
 
@@ -616,7 +712,7 @@ export function RoomSettings(props: {
                           <span className="room-settings-faq-badge">4</span> Trạng thái STUDYING / BREAK nghĩa là gì?
                         </summary>
                         <p className="room-settings-faq-answer">
-                          Đang học, Đang nghỉ và Chưa bắt đầu là trạng thái bạn chọn trong bảng thành viên. Trạng thái hiển thị sau khi máy chủ xác nhận, không tự đổi theo Pomodoro.
+                          Pomodoro điều khiển trạng thái khi có phiên: Focus đang chạy là STUDYING, nghỉ là BREAK, tạm dừng hoặc kết thúc là IDLE. Ngoài phiên bạn có thể chọn thủ công trong bảng thành viên. Avatar chỉ hiển thị snapshot đã được máy chủ xác nhận; trạng thái dùng chung giữa các tab của cùng tài khoản.
                         </p>
                       </details>
 

@@ -5,15 +5,24 @@ import { getSession, logout, subscribeSession } from "@/auth/session";
 import { ProfileAvatar } from "../profile/ProfileAvatar";
 import { profileQuery } from "../profile/profileQueries";
 import { RoomSettings, type SettingsTab } from "./RoomSettings";
+import {
+  readPomodoroPreferences,
+  writePomodoroPreferences,
+  type PomodoroDurations,
+} from "./pomodoroPreferences";
 import "./rooms.css";
 
-type RoomPreferences = {
+export type RoomPreferences = {
   wallpaper: string;
   displayName: string;
   notifications: boolean;
   autoStart: boolean;
+  durations: PomodoroDurations;
+  timerPending: boolean;
+  setTimerPending: (pending: boolean) => void;
   openSettings: (tab?: SettingsTab) => void;
   notify: (message: string) => void;
+  registerBeforeSignOut: (guard: (() => Promise<boolean>) | null) => void;
 };
 
 export function useRoomPreferences() {
@@ -29,8 +38,12 @@ export function RoomsLayout() {
   const { data: profile } = useQuery({ ...profileQuery(user?.id), enabled: false });
   const displayName = profile?.displayName ?? user?.displayName ?? "";
   const avatarKey = profile ? profile.avatarKey : user?.avatarKey;
-  const [notifications, setNotifications] = useState(true);
-  const [autoStart, setAutoStart] = useState(false);
+  const [initialPrefs] = useState(() => readPomodoroPreferences());
+  const [durations, setDurations] = useState<PomodoroDurations>(initialPrefs.durations);
+  const [notifications, setNotifications] = useState<boolean>(initialPrefs.notifications);
+  const [autoStart, setAutoStart] = useState<boolean>(initialPrefs.autoStart);
+  const [timerPending, setTimerPending] = useState(false);
+  const didMountPrefs = useRef(false);
   const [settings, setSettings] = useState<SettingsTab | null>(null);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,6 +60,14 @@ export function RoomsLayout() {
   useEffect(() => () => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
+
+  useEffect(() => {
+    if (!didMountPrefs.current) {
+      didMountPrefs.current = true;
+      return;
+    }
+    writePomodoroPreferences({ durations, notifications, autoStart });
+  }, [durations, notifications, autoStart]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -81,9 +102,19 @@ export function RoomsLayout() {
 
   const closeSettings = useCallback(() => setSettings(null), []);
 
-  function signOut() {
-    logout();
-    navigate("/login", { replace: true });
+  const beforeSignOut = useRef<(() => Promise<boolean>) | null>(null);
+  const registerBeforeSignOut = useCallback((guard: (() => Promise<boolean>) | null) => { beforeSignOut.current = guard; }, []);
+  const signingOut = useRef(false);
+  async function signOut() {
+    if (signingOut.current) return;
+    signingOut.current = true;
+    try {
+      if (beforeSignOut.current && !await beforeSignOut.current()) return;
+      logout();
+      navigate("/login", { replace: true });
+    } finally {
+      signingOut.current = false;
+    }
   }
 
   return (
@@ -113,7 +144,7 @@ export function RoomsLayout() {
           </details>
         </div>
       </header>}
-      <Outlet context={{ wallpaper, displayName, notifications, autoStart, openSettings, notify } satisfies RoomPreferences} />
+      <Outlet context={{ wallpaper, displayName, notifications, autoStart, durations, timerPending, setTimerPending, openSettings, notify, registerBeforeSignOut } satisfies RoomPreferences} />
       {settings !== null && <RoomSettings
         initialTab={settings}
         wallpaper={wallpaper}
@@ -122,6 +153,9 @@ export function RoomsLayout() {
         onNotificationsChange={setNotifications}
         autoStart={autoStart}
         onAutoStartChange={setAutoStart}
+        durations={durations}
+        onDurationsChange={setDurations}
+        timerPending={timerPending}
         onClose={closeSettings}
         onOpenProfile={() => { closeSettings(); navigate("/profile"); }}
         onSignOut={signOut}
