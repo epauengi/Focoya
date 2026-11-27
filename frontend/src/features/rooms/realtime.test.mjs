@@ -268,6 +268,29 @@ describe("createRoomPresence STOMP session", () => {
     assert.deepEqual(JSON.parse(statusSends()[2].body), { status: "BREAK" });
   });
 
+  it("keeps latest timer intent across snapshots and reconnect without status loops", async () => {
+    const session = makePresence({ userId: USER_ID });
+    session.presence.connect();
+    const first = await waitForSocket(session);
+    await establish(session, first);
+    const sends = (socket) => socket.frames.filter((frame) => frame.command === 'SEND' && frame.headers.destination.endsWith('/status'));
+    session.presence.setTimerStatus('STUDYING');
+    for (let i = 0; i < 20; i++) session.presence.setTimerStatus('STUDYING');
+    assert.equal(sends(first).length, 1);
+    first.message(`/topic/rooms/${ROOM_ID}/presence`, snapshot(3, [{ userId: USER_ID, displayName: 'An', avatarKey: null, status: 'IDLE' }]));
+    assert.equal(session.state.snapshot.users[0].status, 'IDLE', 'server snapshot remains authoritative');
+    assert.equal(sends(first).length, 1, 'incoming snapshot must not provoke status fight');
+    first.close(1006, 'network lost');
+    await waitFor(() => session.state.connection === 'reconnecting', 'reconnecting');
+    session.presence.setTimerStatus('BREAK');
+    const second = await waitForSocket(session, 1, 2500);
+    await establish(session, second);
+    assert.deepEqual(sends(second).map((frame) => JSON.parse(frame.body)), [{ status: 'BREAK' }]);
+    session.presence.setTimerStatus('IDLE');
+    session.presence.setTimerStatus(null);
+    assert.deepEqual(sends(second).map((frame) => JSON.parse(frame.body)), [{ status: 'BREAK' }, { status: 'IDLE' }]);
+  });
+
   it("rejects invalid and duplicate-user snapshots as protocol errors without exposing payloads", async () => {
     const session = makePresence({ autoAcknowledgeLeave: false });
     session.presence.connect();

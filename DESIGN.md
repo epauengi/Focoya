@@ -103,4 +103,15 @@ Room cards: 16px; image corners: 11px; search: 12px; room actions: 11px. Filter 
 - Retain keyboard labels, visible focus, 44px utility targets, scrollable modal content and useful empty/not-found states.
 - Focus Room uses the supplied scene artwork, a dark legibility overlay and sparse scene-specific decoration. Reduced motion keeps only the static scene. The cloud control opens a dark popover for locally controlled ambience; nothing plays by default.
 - Focus Room shows up to three confirmed avatar seats below the clock, then a `+N` button for the full list. Each seat has a name and a written study status; the current user has a blue ring and a text label. Join/leave transitions use opacity and translate for 200 ms, absent under reduced motion.
-- Do not imply that the local Pomodoro or task list persists, synchronizes study history, or awards XP.
+- Task list remains temporary. Focus uses StudySession REST; only confirmed backend duration/XP may be shown as recorded. Never infer XP from the countdown.
+
+## TSK-21 · Pomodoro behavior
+
+- Preserve immersive scenes, clock/timer hierarchy, audio, avatar seats and reduced motion. No room-wide countdown.
+- Defaults Focus/Short/Long: 25/5/15 minutes. Integer ranges 5–60 / 1–15 / 5–30; settings apply at idle or next timer, never alter active deadlines. Inline errors, reset defaults, pending-operation disabling.
+- Lifecycle: idle, starting, running, paused, finishing, completed, error, uncertain. Result displays backend minutes and XP, including CANCELLED / zero XP.
+- Pause freezes only the local countdown. Visible guidance explains server elapsed time continues until End Session (60-minute cap). Reset/mode switch confirms before finishing active Focus.
+- Focus requires authenticated, confirmed room presence. Running Focus sends STUDYING; breaks BREAK; pause/end/reset IDLE. Manual status disabled during timer ownership; avatars remain snapshot-authoritative.
+- Toast always provides completion fallback. Native notification permission requires explicit settings interaction. Denied/unsupported guidance; no closed-tab delivery promise.
+- Controlled navigation offers End then Leave. Ambiguous responses never show success or blind replay. Refresh warning cannot guarantee completion; no backend ownership restored from storage.
+- Existing user-scoped profile query refreshes XP/level/hours without optimistic increments. Cross-tab/backend limits: rooms README.

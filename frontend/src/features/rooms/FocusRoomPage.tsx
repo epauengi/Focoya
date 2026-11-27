@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { Link, useBlocker, useParams } from 'react-router';
+import type { ReactNode } from 'react';
+import type { Room } from './rooms';
+import { usePomodoro } from './usePomodoro';
+import { profileQuery } from '../profile/profileQueries';
+import { getSession, subscribeSession } from '../../auth/session';
 import { useRoomPreferences } from './RoomsLayout';
 import {
   TIMER_MODES,
-  remainingSeconds,
   formatCountdown,
 } from './rooms';
 import './focus-room.css';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { roomQuery } from './roomQueries';
 import { RoomQueryState } from './RoomQueryState';
-import { RoomPresence } from './RoomPresence';
+import { RoomPresence, useTimerPresence } from './RoomPresence';
 import { RoomScene } from './RoomSceneLayer';
 import { AmbientAudioControls } from './AmbientAudioControls';
 import { resolveRoomScene } from './roomScene';
@@ -23,43 +27,60 @@ type TaskItem = {
   completed: boolean;
 };
 
-// ponytail: local-only task list and client-side timer; replace with persistent sync backend when multi-user study sessions land.
-function nextTimerMode(current: TimerModeKey): TimerModeKey {
-  if (current === 'focus') return 'short';
-  return 'focus';
-}
-
 export function FocusRoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
+  const auth = useSyncExternalStore(subscribeSession, getSession);
   const result = useQuery(roomQuery(roomId));
+  if (result.isPending || result.isError) return <main className="rooms-container" id="room-main" tabIndex={-1}><RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} /></main>;
   const room = result.data;
-  const {
-    wallpaper,
-    displayName,
-    notifications,
-    autoStart,
-    openSettings,
-    notify,
-  } = useRoomPreferences();
+  if (!room) return <main id="room-main"><h1>Phòng không tồn tại</h1><Link to="/rooms">Khám phá phòng khác</Link></main>;
+  return <RoomPresence key={`${room.id}:${auth.user?.id ?? ''}`} roomId={room.id} maxSlots={room.maxSlots}>{(presence, seats) => (
+    <FocusRoomExperience key={room.id} room={room} presence={presence} seats={seats} />
+  )}</RoomPresence>;
+}
+
+function FocusRoomExperience({ room, presence, seats }: { room: Room; presence: ReactNode; seats: ReactNode }) {
+  const { wallpaper, displayName, notifications, autoStart, durations, setTimerPending, openSettings, notify, registerBeforeSignOut } = useRoomPreferences();
+  const { ready: presenceReady, setTimerStatus } = useTimerPresence();
+  const queryClient = useQueryClient();
+  const onProfileRefresh = useCallback((userId: string) => {
+    void queryClient.invalidateQueries({ queryKey: profileQuery(userId).queryKey, exact: true, refetchType: 'active' });
+  }, [queryClient]);
+  const timer = usePomodoro({ roomId: room.id, durations, autoStart, notifications, notify, onProfileRefresh, presenceReady: presenceReady });
+  const { mode: timerMode, remaining: timerRemaining, message: completionNotice } = timer.state;
+  const isRunning = timer.state.phase === 'running';
+  useEffect(() => { setTimerStatus(timer.intent); }, [setTimerStatus, timer.intent]);
+  useEffect(() => { setTimerPending(timer.busy); return () => setTimerPending(false); }, [setTimerPending, timer.busy]);
+  const blocker = useBlocker(() => timer.hasUnfinished && getSession().status === 'authenticated');
+  useEffect(() => {
+    registerBeforeSignOut(async () => {
+      if (!timer.hasUnfinished) return true;
+      if (timer.busy || !window.confirm('Kết thúc phiên học trước khi đăng xuất?')) return false;
+      if (timer.state.phase === 'uncertain') {
+        if (!window.confirm('Kết quả máy chủ chưa rõ; đăng xuất không đảm bảo phiên đã đóng. Vẫn đăng xuất?')) return false;
+        timer.abandon();
+        return true;
+      }
+      return timer.end();
+    });
+    return () => registerBeforeSignOut(null);
+  }, [registerBeforeSignOut, timer]);
+  useEffect(() => {
+    if (!timer.hasUnfinished) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [timer.hasUnfinished]);
+  const confirmEnd = () => !timer.hasUnfinished || window.confirm('Kết thúc phiên học trước khi thay đổi? Máy chủ sẽ chốt thời gian và XP thực tế.');
+  const handleStartTimer = () => { void timer.start(); };
+  const handlePauseTimer = () => timer.pause();
+  const handleResetTimer = () => { if (confirmEnd()) void timer.reset(); };
+  const handleSelectMode = (mode: TimerModeKey) => { if (mode !== timerMode && confirmEnd()) void timer.selectMode(mode); };
 
   const [activeView, setActiveView] = useState<'live' | 'timer'>('live');
   const [liveTimeString, setLiveTimeString] = useState('');
   const [greetingText, setGreetingText] = useState('');
   const [greetingSubtext, setGreetingSubtext] = useState('');
-
-  // Pomodoro timer state
-  const [timerMode, setTimerMode] = useState<TimerModeKey>('focus');
-  const [timerRemaining, setTimerRemaining] = useState<number>(TIMER_MODES.focus.seconds);
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [completionNotice, setCompletionNotice] = useState<string>('');
-
-  const deadlineRef = useRef<number | null>(null);
-  const timerModeRef = useRef<TimerModeKey>(timerMode);
-  timerModeRef.current = timerMode;
-  const autoStartRef = useRef<boolean>(autoStart);
-  autoStartRef.current = autoStart;
-  const notificationsRef = useRef<boolean>(notifications);
-  notificationsRef.current = notifications;
 
   // Task list state
   const [tasks, setTasks] = useState<TaskItem[]>([
@@ -98,74 +119,6 @@ export function FocusRoomPage() {
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
   }, [displayName]);
-
-  // Pomodoro ticker (timestamp-resilient)
-  useEffect(() => {
-    if (!isRunning) return;
-
-    const interval = setInterval(() => {
-      if (deadlineRef.current === null) return;
-      const now = Date.now();
-      const secondsLeft = remainingSeconds(deadlineRef.current, now);
-      setTimerRemaining(secondsLeft);
-
-      if (secondsLeft <= 0) {
-        const finishedMode = timerModeRef.current;
-        const alertMsg = `Hết giờ ${TIMER_MODES[finishedMode].name}!`;
-        setCompletionNotice(alertMsg);
-
-        if (notificationsRef.current) {
-          notify(alertMsg);
-        }
-
-        if (autoStartRef.current) {
-          const next = nextTimerMode(finishedMode);
-          timerModeRef.current = next;
-          setTimerMode(next);
-          const nextSec = TIMER_MODES[next].seconds;
-          setTimerRemaining(nextSec);
-          deadlineRef.current = Date.now() + nextSec * 1000;
-        } else {
-          setIsRunning(false);
-          deadlineRef.current = null;
-        }
-      }
-    }, 250);
-
-    return () => clearInterval(interval);
-  }, [isRunning, notify]);
-
-  const handleStartTimer = useCallback(() => {
-    setCompletionNotice('');
-    const seconds = timerRemaining > 0 ? timerRemaining : TIMER_MODES[timerMode].seconds;
-    setTimerRemaining(seconds);
-    deadlineRef.current = Date.now() + seconds * 1000;
-    setIsRunning(true);
-  }, [timerRemaining, timerMode]);
-
-  const handlePauseTimer = useCallback(() => {
-    if (deadlineRef.current !== null) {
-      const secondsLeft = remainingSeconds(deadlineRef.current, Date.now());
-      setTimerRemaining(secondsLeft);
-    }
-    deadlineRef.current = null;
-    setIsRunning(false);
-  }, []);
-
-  const handleResetTimer = useCallback(() => {
-    deadlineRef.current = null;
-    setIsRunning(false);
-    setCompletionNotice('');
-    setTimerRemaining(TIMER_MODES[timerMode].seconds);
-  }, [timerMode]);
-
-  const handleSelectMode = useCallback((mode: TimerModeKey) => {
-    deadlineRef.current = null;
-    setIsRunning(false);
-    setCompletionNotice('');
-    setTimerMode(mode);
-    setTimerRemaining(TIMER_MODES[mode].seconds);
-  }, []);
 
   // Tasks actions
   const handleAddTask = (e: React.FormEvent) => {
@@ -216,28 +169,9 @@ export function FocusRoomPage() {
     }
   };
 
-  if (result.isPending || result.isError) {
-    return <main className="rooms-container" id="room-main" tabIndex={-1}><RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} /></main>;
-  }
-  if (!room) {
-    return (
-      <main className="focus-room focus-room--not-found" id="room-main" tabIndex={-1}>
-        <div className="focus-room__overlay" />
-        <div className="focus-room__card-nf">
-          <h1>Phòng không tồn tại</h1>
-          <p>Phòng bạn tìm kiếm không có sẵn hoặc đã đóng.</p>
-          <Link to="/rooms" className="focus-room__back-link">
-            Khám phá phòng học khác
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
   const scene = resolveRoomScene(room, wallpaper);
 
   return (
-    <RoomPresence key={room.id} roomId={room.id} maxSlots={room.maxSlots}>{(presence, seats) => (
     <main className="focus-room" id="room-main">
       <RoomScene {...scene} />
       <div className="focus-room__overlay" aria-hidden="true" />
@@ -305,6 +239,7 @@ export function FocusRoomPage() {
                   className={`focus-timer__mode-btn ${
                     timerMode === mode ? 'focus-timer__mode-btn--active' : ''
                   }`}
+                  disabled={timer.busy || timer.state.phase === 'uncertain'}
                   onClick={() => handleSelectMode(mode)}
                 >
                   {TIMER_MODES[mode].name}
@@ -312,7 +247,8 @@ export function FocusRoomPage() {
               ))}
             </div>
 
-            <div className="focus-timer__card">
+            <p className="focus-timer__state" role="status">{({ idle: 'Sẵn sàng', starting: 'Đang mở phiên học…', running: 'Đang chạy', paused: 'Tạm dừng', finishing: 'Đang chốt phiên học…', completed: 'Đã kết thúc', error: 'Chưa thể tiếp tục', uncertain: 'Chưa xác định kết quả' })[timer.state.phase]} · {durations[timerMode]} phút cấu hình</p>
+            <div className="focus-timer__card" aria-busy={timer.busy}>
               <div
                 className="focus-timer__digits"
                 aria-label={`Thời gian còn lại: ${formatCountdown(timerRemaining)}`}
@@ -335,7 +271,9 @@ export function FocusRoomPage() {
                   <button
                     type="button"
                     className="focus-timer__ctrl-btn focus-timer__ctrl-btn--primary"
-                    aria-label="Bắt đầu hẹn giờ"
+                    aria-label={timer.state.phase === 'paused' ? 'Tiếp tục hẹn giờ' : 'Bắt đầu hẹn giờ'}
+                    disabled={timer.busy || timer.state.phase === 'uncertain' || (timerMode === 'focus' && !timer.state.session && !presenceReady)}
+                    title={timerMode === 'focus' && !presenceReady ? 'Cần xác nhận kết nối phòng trước khi mở phiên học.' : undefined}
                     onClick={handleStartTimer}
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -347,6 +285,7 @@ export function FocusRoomPage() {
                   type="button"
                   className="focus-timer__ctrl-btn"
                   aria-label="Đặt lại thời gian"
+                  disabled={timer.busy || timer.state.phase === 'uncertain'}
                   onClick={handleResetTimer}
                 >
                   <svg
@@ -366,6 +305,11 @@ export function FocusRoomPage() {
               </div>
             </div>
 
+            <div className="focus-timer__actions">
+              {timer.state.session && <button type="button" className="focus-toggle-btn" disabled={timer.busy || timer.state.phase === 'uncertain'} onClick={() => { void timer.end(); }}>Kết thúc phiên học</button>}
+              <button type="button" className="focus-toggle-btn" disabled={timer.busy} onClick={() => openSettings('timer')}>Thời lượng & tự động bắt đầu</button>
+            </div>
+            <p className="focus-timer__help">{timerMode === 'focus' ? 'Tạm dừng chỉ dừng đồng hồ. Máy chủ vẫn tính thời gian đến khi bạn kết thúc phiên; tối đa 60 phút.' : 'Đồng hồ nghỉ chạy trên trình duyệt, không ghi phiên học và không cấp XP.'}</p>
             <button
               type="button"
               className="focus-toggle-btn"
@@ -389,6 +333,17 @@ export function FocusRoomPage() {
             </button>
           </div>
         )}
+        {completionNotice && <p className="focus-timer__notice" role={timer.state.phase === 'uncertain' ? 'alert' : undefined}>{completionNotice}</p>}
+        {!presenceReady && timer.hasUnfinished && <p className="focus-timer__notice" role="status">Kết nối hiện diện gián đoạn. Đồng hồ và phiên học vẫn tiếp tục; trạng thái sẽ đồng bộ sau khi vào lại phòng.</p>}
+        <p className="focus-timer__help">Tải lại hoặc đóng tab không đảm bảo kết thúc phiên. Bắt đầu phiên mới có thể chốt phiên cũ trên máy chủ.</p>
+        {blocker.state === 'blocked' && <section className="focus-timer__leave" aria-label="Rời phiên học" role="alert">
+          <p>Phiên học chưa kết thúc. Kết thúc trước khi rời phòng?</p>
+          <button type="button" className="focus-toggle-btn" disabled={timer.busy || timer.state.phase === 'uncertain'} onClick={async () => { if (await timer.end()) blocker.proceed(); }}>Kết thúc rồi rời phòng</button>
+          <button type="button" className="focus-toggle-btn" onClick={() => blocker.reset()}>Ở lại</button>
+          {timer.state.phase === 'uncertain' && <button type="button" className="focus-toggle-btn" onClick={() => {
+            if (window.confirm('Kết quả máy chủ chưa rõ. Rời đi không đảm bảo phiên đã đóng. Không tự thử lại; phiên sau có thể chốt phiên cũ. Vẫn rời phòng?')) { timer.abandon(); blocker.proceed(); }
+          }}>Rời phòng dù chưa rõ kết quả</button>}
+        </section>}
         {seats}
       </section>
 
@@ -566,6 +521,5 @@ export function FocusRoomPage() {
         </div>
       </footer>
     </main>
-    )}</RoomPresence>
   );
 }

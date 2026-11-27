@@ -1,9 +1,16 @@
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { getAccessToken, getSession, subscribeSession } from '../../auth/session';
 import { ProfileAvatar } from '../profile/ProfileAvatar';
 import { createRoomPresence, type PresenceState, type PresenceStatus, type PresenceUser } from './realtime';
 import { projectPresence, type PresencePresentation } from './presencePresentation';
 import './room-presence.css';
+
+const TimerPresenceContext = createContext<{
+  ready: boolean;
+  setTimerStatus: (status: PresenceStatus | null) => void;
+}>({ ready: false, setTimerStatus: () => {} });
+
+export const useTimerPresence = () => useContext(TimerPresenceContext);
 
 const initialState: PresenceState = {
   connection: 'connecting', snapshot: null, error: '', errorCode: null,
@@ -61,6 +68,19 @@ export function RoomPresence({ roomId, maxSlots, children }: {
   const [submittedCode, setSubmittedCode] = useState('');
   const [paused, setPaused] = useState(false);
   const controller = useRef<ReturnType<typeof createRoomPresence> | null>(null);
+  const timerIntent = useRef<PresenceStatus | null>(null);
+  const [timerControlled, setTimerControlled] = useState(false);
+  const setTimerStatus = useCallback((status: PresenceStatus | null) => {
+    if (timerIntent.current === status) return;
+    const previous = timerIntent.current;
+    timerIntent.current = status;
+    setTimerControlled(status !== null);
+    if (status !== null || previous !== null) {
+      const userId = getSession().user?.id;
+      lastStatus.current = userId ? { userId, status: status ?? 'IDLE' } : null;
+      controller.current?.setTimerStatus(status);
+    }
+  }, []);
   const panel = useRef<HTMLDetailsElement>(null);
   const summary = useRef<HTMLElement>(null);
   const lastStatus = useRef<{ userId: string; status: PresenceStatus } | null>(null);
@@ -124,7 +144,8 @@ export function RoomPresence({ roomId, maxSlots, children }: {
       });
       controller.current = client;
       const saved = lastStatus.current;
-      if (saved && saved.userId === session.user?.id) client.setStatus(saved.status);
+      if (timerIntent.current !== null) client.setTimerStatus(timerIntent.current);
+      else if (saved && saved.userId === session.user?.id) client.setStatus(saved.status);
       client.connect();
     } catch {
       setConnection({ session, members: null, presence: {
@@ -191,7 +212,7 @@ export function RoomPresence({ roomId, maxSlots, children }: {
         {members && <>
           {self && <>
             <label htmlFor={statusId}>Trạng thái của bạn</label>
-            <select id={statusId} value={self.status} onChange={(event) => controller.current?.setStatus(event.target.value as PresenceStatus)}>
+            <select id={statusId} value={self.status} disabled={timerControlled} title={timerControlled ? 'Pomodoro đang điều khiển trạng thái của bạn.' : undefined} onChange={(event) => controller.current?.setStatus(event.target.value as PresenceStatus)}>
               {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </>}
@@ -238,5 +259,7 @@ export function RoomPresence({ roomId, maxSlots, children }: {
     </section>
   ) : null;
 
-  return children(details, seats);
+  return <TimerPresenceContext.Provider value={{ ready: Boolean(self && members), setTimerStatus }}>
+    {children(details, seats)}
+  </TimerPresenceContext.Provider>;
 }

@@ -52,6 +52,7 @@ export function createRoomPresence(options: {
   let phase: 'offline' | 'queues' | 'join' | 'topic' | 'resync' | 'ready' | 'leaving' = 'offline';
   let revision = -1;
   let desiredStatus: PresenceStatus | null = null;
+  let timerStatus: PresenceStatus | null = null;
   let sentStatus: PresenceStatus | null = null;
   let subscriptions: StompSubscription[] = [];
   let commands: string[] = [];
@@ -123,7 +124,7 @@ export function createRoomPresence(options: {
     if (event.revision >= revision) {
       revision = event.revision;
       const self = options.userId && event.users.find((user) => user.userId === options.userId);
-      if (self && phase === 'ready') desiredStatus = sentStatus = self.status;
+      if (self && phase === 'ready' && timerStatus === null) desiredStatus = sentStatus = self.status;
       emit({ snapshot: event });
     }
     if (command === 'join' && phase === 'join') {
@@ -200,6 +201,15 @@ export function createRoomPresence(options: {
       started = true;
       emit({ connection: 'connecting', snapshot: null, error: '', errorCode: null });
       client.activate();
+    },
+    setTimerStatus(status: PresenceStatus | null) {
+      if (stopped || (status !== null && !statuses.has(status))) return;
+      const previous = timerStatus;
+      timerStatus = status;
+      if (status !== null || previous !== null) {
+        desiredStatus = status ?? 'IDLE';
+        sendStatus();
+      }
     },
     setStatus(status: PresenceStatus) {
       if (stopped || !statuses.has(status)) return;
