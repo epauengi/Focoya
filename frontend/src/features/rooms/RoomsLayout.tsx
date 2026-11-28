@@ -11,6 +11,7 @@ import {
   type PomodoroDurations,
 } from "./pomodoroPreferences";
 import "./rooms.css";
+import { retainPrivateRoomAccessForPath } from './privateRoomAccess';
 
 export type RoomPreferences = {
   wallpaper: string;
@@ -31,6 +32,8 @@ export function useRoomPreferences() {
 
 export function RoomsLayout() {
   const { pathname } = useLocation();
+  useEffect(() => { retainPrivateRoomAccessForPath(pathname); }, [pathname]);
+  useEffect(() => () => { retainPrivateRoomAccessForPath(''); }, []);
   const navigate = useNavigate();
   const [wallpaper, setWallpaper] = useState("");
   const { user } = useSyncExternalStore(subscribeSession, getSession);

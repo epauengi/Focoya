@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useBlocker, useParams } from 'react-router';
 import type { ReactNode } from 'react';
 import type { Room } from './rooms';
 import { usePomodoro } from './usePomodoro';
 import { profileQuery } from '../profile/profileQueries';
-import { getSession, subscribeSession } from '../../auth/session';
+import { getSession } from '../../auth/session';
 import { useRoomPreferences } from './RoomsLayout';
 import {
   TIMER_MODES,
   formatCountdown,
 } from './rooms';
 import './focus-room.css';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { roomQuery } from './roomQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAccessibleRoom } from './useAccessibleRoom';
+import { PrivateRoomGate } from './PrivateRoomGate';
+import { ApiError } from '../../auth/session';
 import { RoomQueryState } from './RoomQueryState';
 import { RoomPresence, useTimerPresence } from './RoomPresence';
 import { RoomScene } from './RoomSceneLayer';
@@ -29,12 +31,12 @@ type TaskItem = {
 
 export function FocusRoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
-  const auth = useSyncExternalStore(subscribeSession, getSession);
-  const result = useQuery(roomQuery(roomId));
-  if (result.isPending || result.isError) return <main className="rooms-container" id="room-main" tabIndex={-1}><RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} /></main>;
-  const room = result.data;
+  const { auth, guest, rejection, result, room } = useAccessibleRoom(roomId);
+  if (rejection) return <main className="rooms-container" id="room-main" tabIndex={-1}><PrivateRoomGate roomId={roomId} errorCode={rejection.code} /></main>;
+  if (!guest && result.error instanceof ApiError && result.error.status === 403) return <main className="rooms-container" id="room-main" tabIndex={-1}><PrivateRoomGate roomId={roomId} /></main>;
+  if (!guest && (result.isPending || result.isError)) return <main className="rooms-container" id="room-main" tabIndex={-1}><RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} /></main>;
   if (!room) return <main id="room-main"><h1>Phòng không tồn tại</h1><Link to="/rooms">Khám phá phòng khác</Link></main>;
-  return <RoomPresence key={`${room.id}:${auth.user?.id ?? ''}`} roomId={room.id} maxSlots={room.maxSlots}>{(presence, seats) => (
+  return <RoomPresence key={`${room.id}:${auth.user?.id ?? ''}`} roomId={room.id} maxSlots={room.maxSlots} initialInviteCode={guest?.inviteCode}>{(presence, seats) => (
     <FocusRoomExperience key={room.id} room={room} presence={presence} seats={seats} />
   )}</RoomPresence>;
 }

@@ -58,31 +58,9 @@ export function ExplorePage() {
     <div className="rooms-filters" aria-label="Lọc theo chủ đề">
       {THEMES.map((item) => <button key={item} className={theme === item ? "is-active" : ""} aria-pressed={theme === item} onClick={() => updateFilter("theme", item)}>{item}</button>)}
     </div>
-    <div className="rooms-result-info"><p aria-live="polite">{updating ? "Đang tải phòng..." : result.isError ? "Không tải được danh sách phòng" : `${rooms.length} không gian học tập`}</p><span>Chưa hỗ trợ trạng thái online realtime</span></div>
+    <div className="rooms-result-info"><p aria-live="polite">{updating ? "Đang tải phòng..." : result.isError ? "Không tải được danh sách phòng" : `${rooms.length} không gian học tập`}</p><span>Số online cập nhật khi tải phòng; realtime sau khi vào</span></div>
     {result.isPending || result.isError ? <RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} />
       : rooms.length ? <div className="rooms-grid" aria-busy={updating}>{rooms.map((room) => <RoomCard room={room} key={room.id} />)}</div>
       : <section className="rooms-empty" aria-labelledby="rooms-empty-title"><h2 id="rooms-empty-title">Không tìm thấy phòng nào</h2><p>Thử từ khóa hoặc chủ đề khác nhé.</p><button className="rooms-button" onClick={() => setParams({})}>Xem tất cả phòng</button></section>}
-  </main>;
-}
-
-export function MyRoomsPage() {
-  const [selectedRoom, setSelectedRoom] = useState("");
-  const result = useQuery(roomsQuery());
-  const rooms = result.data ?? [];
-  const selected = rooms.find((room) => room.id === selectedRoom);
-  return <main className="rooms-container" id="room-main" tabIndex={-1}>
-    <section className="rooms-intro"><div><h1>My Rooms</h1><p>Chọn một không gian tập trung dành cho bạn.</p></div></section>
-    <section className="rooms-my-space">
-      <img src="/room-assets/rainy.jpg" alt="Góc bàn học nhìn ra cửa sổ mưa" width="640" height="400" />
-      <div><h2>Không gian của bạn</h2><p>Bạn có thể chọn phòng công khai để dùng Pomodoro và danh sách công việc.</p>
-        {result.isPending || result.isError ? <RoomQueryState pending={result.isPending} error={result.error} retry={() => { void result.refetch(); }} /> : <>
-          {!rooms.length && <p role="status">Chưa có phòng công khai.</p>}
-          <label htmlFor="personal-room">Chọn không gian</label>
-          <select id="personal-room" value={selected?.id ?? ""} onChange={(event) => setSelectedRoom(event.target.value)}><option value="">Chọn một phòng…</option>{rooms.map((room) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>
-          {selected ? <Link className="rooms-button" to={`/rooms/${selected.id}`}>Mở không gian tập trung</Link> : <button className="rooms-button" disabled>Chọn phòng để tiếp tục</button>}
-        </>}
-        <Link className="rooms-text-link" to="/rooms">Khám phá tất cả phòng</Link>
-      </div>
-    </section>
   </main>;
 }

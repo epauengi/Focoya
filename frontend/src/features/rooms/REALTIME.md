@@ -1,12 +1,15 @@
 # TSK-17/19 · Realtime Focus Room
 
+## TSK-22 · Private admission
+
+My Rooms tạo phòng và xác thực mã; Preview/Focus dùng guest metadata riêng trong memory thay owner-only detail request. `RoomPresence.initialInviteCode` chuyển mã room-scoped vào JOIN/reconnect hiện có. UUID đơn thuần vẫn 403, refresh phải nhập lại mã; owner không cần mã của mình. Membership, online và seats chỉ xác nhận sau JOIN/resync. Chi tiết, lỗi, cleanup, capacity và StudySession authorization: [PRIVATE-ROOMS.md](./PRIVATE-ROOMS.md).
+
 `RoomPresence` điều khiển cả thanh chỗ ngồi lẫn bảng thành viên qua một controller. Số người lấy từ `snapshot.onlineCount`; sức chứa lấy từ `room.maxSlots`. Chỉ hiển thị thành viên sau JOIN/resync thành công. Thanh ưu tiên chỗ của bạn, tối đa ba avatar; nút `+N` mở danh sách đầy đủ. Hai nơi đều dùng `ProfileAvatar`, không gọi API theo từng user.
 
 `projectPresence` so sánh snapshot liên tiếp, giữ thứ tự thành viên cũ và thêm người mới vào cuối. Ra/vào dùng hiệu ứng 200 ms ở các chỗ đang hiện; hình rời phòng nằm ngoài danh sách và cây trợ năng, bị gỡ khi hiệu ứng kết thúc hoặc người đó vào lại. Snapshot đầu tiên, đổi thông tin hồ sơ/trạng thái, mất kết nối, đổi socket và chuyển phòng không tạo hiệu ứng ra/vào giả. Reduced motion bỏ các hiệu ứng này nhưng vẫn cập nhật thành viên ngay.
 
 Test trình bày: `node --test src/features/rooms/presencePresentation.test.mjs`. Khi kiểm tra bằng backend thật, xác nhận thêm `+N`, fallback avatar, trạng thái xác nhận từ máy chủ và đóng một trong hai tab của cùng tài khoản không làm mất người đó.
 
-Giới hạn hiện tại: REST chi tiết phòng riêng trả 403 cho khách truy cập trực tiếp qua UUID, trước khi giao diện có thể JOIN STOMP. Bảng mã mời xử lý lỗi STOMP khi trang đã tải được phòng; luồng mời khách hoàn chỉnh thuộc TSK-22. Không nới quyền REST hoặc STOMP.
 
 Contract: [`docs/realtime-presence.md`](../../../../docs/realtime-presence.md). Backend TSK-16 phải được triển khai; không có fallback presence giả.
 

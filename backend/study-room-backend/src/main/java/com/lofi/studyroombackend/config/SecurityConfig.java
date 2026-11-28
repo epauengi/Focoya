@@ -50,7 +50,9 @@ public class SecurityConfig {
             // WebSocket handshake is anonymous; STOMP CONNECT authenticates the JWT.
             auth.requestMatchers("/ws-room").permitAll();
             // Explore + Preview: khách chưa đăng nhập vẫn xem được phòng (giống FE). Chỉ mở GET.
+            // "/api/rooms/me" phải đứng TRƯỚC "/api/rooms/{roomId}" để không bị coi là roomId công khai.
             // "/api/rooms/{roomId}" chỉ khớp đúng 1 đoạn sau /rooms, nên /api/rooms/join/{code} vẫn cần đăng nhập.
+            auth.requestMatchers(HttpMethod.GET, "/api/rooms/me").authenticated();
             auth.requestMatchers(HttpMethod.GET, "/api/rooms", "/api/rooms/{roomId}").permitAll();
             // File hợp đồng API của Tiên + Swagger UI (sau này).
             auth.requestMatchers("/openapi.yaml", "/swagger-ui/**", "/v3/api-docs/**").permitAll();

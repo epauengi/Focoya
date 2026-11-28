@@ -14,11 +14,20 @@ const reactJsxRuntimeUrl = import.meta.resolve("react/jsx-runtime");
 const reactRouterUrl = import.meta.resolve("react-router");
 const reactQueryUrl = import.meta.resolve("@tanstack/react-query");
 
-const roomsTsSource = fs.readFileSync(new URL("./rooms.ts", import.meta.url), "utf8");
-const transpiledRooms = ts.transpileModule(roomsTsSource, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ESNext },
-}).outputText;
-const roomsDataUrl = `data:text/javascript;base64,${Buffer.from(transpiledRooms).toString("base64")}`;
+// Shim useSyncExternalStore server snapshot for SSR rendering of client-only external stores.
+const reactShimSource = `
+import RealReact, * as ReactNs from "${reactUrl}";
+export * from "${reactUrl}";
+export function useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot) {
+  return ReactNs.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot ? () => getSnapshot() : getSnapshot
+  );
+}
+export default { ...RealReact, useSyncExternalStore };
+`;
+const reactShimUrl = `data:text/javascript;base64,${Buffer.from(reactShimSource).toString("base64")}`;
 
 const sessionStubSource = `
 export class ApiError extends Error {
@@ -29,48 +38,120 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest(path, init) {
+const listeners = new Set();
+let currentSession = { status: "anonymous", user: null, error: "" };
+let currentGen = 0;
+
+export function __setTestSession(next, bumpGen = true) {
+  currentSession = next;
+  if (bumpGen) currentGen++;
+  listeners.forEach((l) => l());
+}
+
+export function getSession() {
+  return currentSession;
+}
+
+export function getSessionGeneration() {
+  return currentGen;
+}
+
+export function subscribeSession(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export async function apiRequest(path, init, expectedUserId) {
   if (!globalThis.__ROOM_PREVIEW_TEST_API_REQUEST__) {
     throw new Error(\`Unexpected apiRequest call: \${path}\`);
   }
-  return globalThis.__ROOM_PREVIEW_TEST_API_REQUEST__(path, init);
+  return globalThis.__ROOM_PREVIEW_TEST_API_REQUEST__(path, init, expectedUserId);
 }
 `;
 const sessionStubDataUrl = `data:text/javascript;base64,${Buffer.from(sessionStubSource).toString("base64")}`;
-const { ApiError } = await import(sessionStubDataUrl);
+const { ApiError, __setTestSession, getSessionGeneration } = await import(sessionStubDataUrl);
 
-const roomQueriesTsSource = fs.readFileSync(new URL("./roomQueries.ts", import.meta.url), "utf8");
-const transpiledRoomQueries = ts.transpileModule(roomQueriesTsSource, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ESNext },
-}).outputText
-  .replace(/(from\s+["'])@tanstack\/react-query(["'])/g, `$1${reactQueryUrl}$2`)
-  .replace(/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, `$1${sessionStubDataUrl}$2`)
-  .replace(/(from\s+["'])\.\/rooms(["'])/g, `$1${roomsDataUrl}$2`);
-const roomQueriesDataUrl = `data:text/javascript;base64,${Buffer.from(transpiledRoomQueries).toString("base64")}`;
-const { roomKeys, roomQuery } = await import(roomQueriesDataUrl);
+function transpileModule(relPath, replacements = []) {
+  const source = fs
+    .readFileSync(new URL(relPath, import.meta.url), "utf8")
+    .replace(/^\s*import\s+["'][^"']+\.css["'];?\s*$/gm, "");
+  let transpiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ESNext, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  for (const [pattern, target] of replacements) {
+    transpiled = transpiled.replace(pattern, `$1${target}$2`);
+  }
+  return `data:text/javascript;base64,${Buffer.from(transpiled).toString("base64")}`;
+}
 
-const roomQueryStateTsSource = fs.readFileSync(new URL("./RoomQueryState.tsx", import.meta.url), "utf8");
-const transpiledRoomQueryState = ts.transpileModule(roomQueryStateTsSource, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ESNext, jsx: ts.JsxEmit.ReactJSX },
-}).outputText
-  .replace(/(from\s+["'])react\/jsx-runtime(["'])/g, `$1${reactJsxRuntimeUrl}$2`)
-  .replace(/(from\s+["'])react-router(["'])/g, `$1${reactRouterUrl}$2`)
-  .replace(/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, `$1${sessionStubDataUrl}$2`);
-const roomQueryStateDataUrl = `data:text/javascript;base64,${Buffer.from(transpiledRoomQueryState).toString("base64")}`;
+const roomsDataUrl = transpileModule("./rooms.ts");
+const privateRoomsDataUrl = transpileModule("./privateRooms.ts", [
+  [/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, sessionStubDataUrl],
+  [/(from\s+["'])\.\/rooms(["'])/g, roomsDataUrl],
+]);
+const privateRoomQueriesDataUrl = transpileModule("./privateRoomQueries.ts", [
+  [/(from\s+["'])@tanstack\/react-query(["'])/g, reactQueryUrl],
+  [/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, sessionStubDataUrl],
+  [/(from\s+["'])\.\/rooms(["'])/g, roomsDataUrl],
+  [/(from\s+["'])\.\/privateRooms(["'])/g, privateRoomsDataUrl],
+]);
+const privateRoomAccessDataUrl = transpileModule("./privateRoomAccess.ts", [
+  [/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, sessionStubDataUrl],
+  [/(from\s+["'])\.\/privateRooms(["'])/g, privateRoomsDataUrl],
+  [/(from\s+["'])\.\/rooms(["'])/g, roomsDataUrl],
+]);
+const useAccessibleRoomDataUrl = transpileModule("./useAccessibleRoom.ts", [
+  [/(from\s+["'])react(["'])/g, reactShimUrl],
+  [/(from\s+["'])@tanstack\/react-query(["'])/g, reactQueryUrl],
+  [/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, sessionStubDataUrl],
+  [/(from\s+["'])\.\/privateRoomAccess(["'])/g, privateRoomAccessDataUrl],
+  [/(from\s+["'])\.\/privateRoomQueries(["'])/g, privateRoomQueriesDataUrl],
+]);
+const roomQueryStateDataUrl = transpileModule("./RoomQueryState.tsx", [
+  [/(from\s+["'])react\/jsx-runtime(["'])/g, reactJsxRuntimeUrl],
+  [/(from\s+["'])react-router(["'])/g, reactRouterUrl],
+  [/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, sessionStubDataUrl],
+]);
+const joinByCodeFormDataUrl = transpileModule("./JoinByCodeForm.tsx", [
+  [/(from\s+["'])react\/jsx-runtime(["'])/g, reactJsxRuntimeUrl],
+  [/(from\s+["'])react(["'])/g, reactShimUrl],
+  [/(from\s+["'])react-router(["'])/g, reactRouterUrl],
+  [/(from\s+["'])@\/auth\/session(["'])/g, sessionStubDataUrl],
+  [/(from\s+["'])\.\/rooms(["'])/g, roomsDataUrl],
+  [/(from\s+["'])\.\/privateRooms(["'])/g, privateRoomsDataUrl],
+  [/(from\s+["'])\.\/privateRoomAccess(["'])/g, privateRoomAccessDataUrl],
+]);
+const privateRoomGateDataUrl = transpileModule("./PrivateRoomGate.tsx", [
+  [/(from\s+["'])react\/jsx-runtime(["'])/g, reactJsxRuntimeUrl],
+  [/(from\s+["'])react-router(["'])/g, reactRouterUrl],
+  [/(from\s+["'])\.\/JoinByCodeForm(["'])/g, joinByCodeFormDataUrl],
+]);
+const inviteCodeShareDataUrl = transpileModule("./InviteCodeShare.tsx", [
+  [/(from\s+["'])react\/jsx-runtime(["'])/g, reactJsxRuntimeUrl],
+  [/(from\s+["'])react(["'])/g, reactShimUrl],
+]);
+const previewDataUrl = transpileModule("./RoomPreviewPage.tsx", [
+  [/(from\s+["'])react\/jsx-runtime(["'])/g, reactJsxRuntimeUrl],
+  [/(from\s+["'])react(["'])/g, reactShimUrl],
+  [/(from\s+["'])react-router(["'])/g, reactRouterUrl],
+  [/(from\s+["'])\.\.\/\.\.\/auth\/session(["'])/g, sessionStubDataUrl],
+  [/(from\s+["'])\.\/useAccessibleRoom(["'])/g, useAccessibleRoomDataUrl],
+  [/(from\s+["'])\.\/RoomQueryState(["'])/g, roomQueryStateDataUrl],
+  [/(from\s+["'])\.\/PrivateRoomGate(["'])/g, privateRoomGateDataUrl],
+  [/(from\s+["'])\.\/InviteCodeShare(["'])/g, inviteCodeShareDataUrl],
+]);
 
-const previewTsSource = fs.readFileSync(new URL("./RoomPreviewPage.tsx", import.meta.url), "utf8");
-const transpiledPreview = ts.transpileModule(previewTsSource, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ESNext, jsx: ts.JsxEmit.ReactJSX },
-}).outputText
-  .replace(/(from\s+["'])react\/jsx-runtime(["'])/g, `$1${reactJsxRuntimeUrl}$2`)
-  .replace(/(from\s+["'])react(["'])/g, `$1${reactUrl}$2`)
-  .replace(/(from\s+["'])@tanstack\/react-query(["'])/g, `$1${reactQueryUrl}$2`)
-  .replace(/(from\s+["'])react-router(["'])/g, `$1${reactRouterUrl}$2`)
-  .replace(/(from\s+["'])\.\/roomQueries(["'])/g, `$1${roomQueriesDataUrl}$2`)
-  .replace(/(from\s+["'])\.\/RoomQueryState(["'])/g, `$1${roomQueryStateDataUrl}$2`);
-const previewDataUrl = `data:text/javascript;base64,${Buffer.from(transpiledPreview).toString("base64")}`;
+const { privateRoomDetailQuery } = await import(privateRoomQueriesDataUrl);
+const {
+  clearPrivateRoomAccess,
+  getPrivateRoomAccess,
+  getPrivateRoomRejection,
+  grantPrivateRoomAccess,
+  rejectPrivateRoomAccess,
+} = await import(privateRoomAccessDataUrl);
 const { RoomPreviewPage } = await import(previewDataUrl);
 
+const USER_ID = "4251cc03-c9a7-42ac-a3d1-e75850417ab4";
 const VALID_ROOM_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 const SAMPLE_ROOM = {
   id: VALID_ROOM_ID,
@@ -84,25 +165,38 @@ const SAMPLE_ROOM = {
   inviteCode: null,
 };
 
+const PRIVATE_ROOM = {
+  ...SAMPLE_ROOM,
+  name: "Nhóm Ôn Thi",
+  theme: "Study",
+  visibility: "PRIVATE",
+  inviteCode: "AB12CD",
+};
+
 function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
         retryOnMount: false,
+        gcTime: 0,
       },
     },
   });
 }
 
+function detailKey(roomId) {
+  return privateRoomDetailQuery(roomId, USER_ID).queryKey;
+}
+
 function renderPreview(roomId, client) {
   const queryClient = client ?? createTestQueryClient();
-  const entry = roomId ? `/rooms/${roomId}` : "/rooms";
+  const entry = roomId ? `/rooms/${roomId}/preview` : "/rooms";
   return renderToString(
     React.createElement(QueryClientProvider, { client: queryClient },
       React.createElement(MemoryRouter, { initialEntries: [entry] },
         React.createElement(Routes, null,
-          React.createElement(Route, { path: "/rooms/:roomId", element: React.createElement(RoomPreviewPage) }),
+          React.createElement(Route, { path: "/rooms/:roomId/preview", element: React.createElement(RoomPreviewPage) }),
           React.createElement(Route, { path: "/rooms", element: React.createElement(RoomPreviewPage) })
         )
       )
@@ -112,13 +206,19 @@ function renderPreview(roomId, client) {
 
 describe("RoomPreviewPage regression suite", () => {
   beforeEach(() => {
+    clearPrivateRoomAccess();
     globalThis.__ROOM_PREVIEW_TEST_API_REQUEST__ = null;
+    __setTestSession({
+      status: "authenticated",
+      user: { id: USER_ID, email: "u@focoya.test", displayName: "An", avatarKey: null, role: "user" },
+      error: "",
+    }, true);
   });
 
   describe("Success state rendering", () => {
-    it("renders room details, scene image, metadata, and active navigation links", () => {
+    it("renders public room details, scene image, metadata, and active navigation links", () => {
       const client = createTestQueryClient();
-      client.setQueryData(roomKeys.detail(VALID_ROOM_ID), SAMPLE_ROOM);
+      client.setQueryData(detailKey(VALID_ROOM_ID), SAMPLE_ROOM);
 
       const html = renderPreview(VALID_ROOM_ID, client);
 
@@ -127,6 +227,7 @@ describe("RoomPreviewPage regression suite", () => {
       assert.match(html, /Quay lại Explore/);
       assert.match(html, /<h1[^>]*id="preview-title"[^>]*>Cozy Café<\/h1>/);
       assert.match(html, /Chủ đề:(?:<!-- -->|\s)*Café/);
+      assert.doesNotMatch(html, /Phòng riêng ·/);
       assert.match(html, /Phòng học yên tĩnh cùng tiếng mưa/);
       assert.match(html, /<dd>16<span class="rooms-sr-only">\s*người<\/span><\/dd>/);
       assert.match(html, /<img[^>]*src="\/room-assets\/rainy\.jpg"/);
@@ -140,7 +241,7 @@ describe("RoomPreviewPage regression suite", () => {
     it("renders fallback 'Phòng chưa có mô tả.' when room description is empty or whitespace", () => {
       for (const emptyDesc of ["", "   ", "\n\t  "]) {
         const client = createTestQueryClient();
-        client.setQueryData(roomKeys.detail(VALID_ROOM_ID), {
+        client.setQueryData(detailKey(VALID_ROOM_ID), {
           ...SAMPLE_ROOM,
           description: emptyDesc,
         });
@@ -150,9 +251,9 @@ describe("RoomPreviewPage regression suite", () => {
       }
     });
 
-    it("ignores API online count and never infers full room even when online >= maxSlots", () => {
+    it("shows REST last-known counts with no-reservation note and keeps Join active even when online >= maxSlots", () => {
       const client = createTestQueryClient();
-      client.setQueryData(roomKeys.detail(VALID_ROOM_ID), {
+      client.setQueryData(detailKey(VALID_ROOM_ID), {
         ...SAMPLE_ROOM,
         online: 16,
         maxSlots: 16,
@@ -160,19 +261,47 @@ describe("RoomPreviewPage regression suite", () => {
 
       const html = renderPreview(VALID_ROOM_ID, client);
 
+      assert.match(html, /<dt>Online gần nhất<\/dt><dd>16<\/dd>/);
+      assert.match(html, /<dt>Tối đa<\/dt><dd>16<span class="rooms-sr-only">\s*người<\/span><\/dd>/);
+      assert.match(html, /<dt>Chỗ trống gần nhất<\/dt><dd>0<\/dd>/);
       assert.match(
         html,
-        /<dt>Đang online<\/dt><dd><span aria-hidden="true">—<\/span><span class="rooms-sr-only">Chưa có dữ liệu<\/span><\/dd>/
+        /id="room-presence-note"[^>]*>Số online là lần ghi nhận từ máy chủ, không giữ chỗ\. Kết nối realtime xác nhận quyền vào phòng và số người thực tế; phòng có thể đầy trước khi bạn vào\./
       );
-      assert.match(
-        html,
-        /<dt>Chỗ trống<\/dt><dd><span aria-hidden="true">—<\/span><span class="rooms-sr-only">Chưa có dữ liệu<\/span><\/dd>/
-      );
-      assert.doesNotMatch(html, /<dt>Đang online<\/dt><dd>16/);
-      assert.doesNotMatch(html, /<dt>Chỗ trống<\/dt><dd>0/);
-      assert.match(html, /id="room-presence-note"[^>]*>Chưa có dữ liệu online và chỗ trống thực tế; chưa thể xác định phòng đầy\./);
       assert.match(html, /<a[^>]*class="rooms-button"[^>]*href="\/rooms\/3fa85f64-5717-4562-b3fc-2c963f66afa6"[^>]*>Vào phòng/);
       assert.doesNotMatch(html, /disabled/i);
+
+      // Clamps remaining slots at 0 if online exceeds maxSlots
+      const overClient = createTestQueryClient();
+      overClient.setQueryData(detailKey(VALID_ROOM_ID), {
+        ...SAMPLE_ROOM,
+        online: 20,
+        maxSlots: 16,
+      });
+      const overHtml = renderPreview(VALID_ROOM_ID, overClient);
+      assert.match(overHtml, /<dt>Chỗ trống gần nhất<\/dt><dd>0<\/dd>/);
+    });
+
+    it("renders private room back link to /my-rooms, shares owner invite code, and hides it for guests", () => {
+      const ownerClient = createTestQueryClient();
+      ownerClient.setQueryData(detailKey(VALID_ROOM_ID), PRIVATE_ROOM);
+
+      const ownerHtml = renderPreview(VALID_ROOM_ID, ownerClient);
+      assert.match(ownerHtml, /<a[^>]*class="rooms-back"[^>]*href="\/my-rooms"/);
+      assert.match(ownerHtml, /Quay lại My Rooms/);
+      assert.match(ownerHtml, /Phòng riêng · (?:<!-- -->|\s)*Chủ đề:(?:<!-- -->|\s)*Study/);
+      assert.match(ownerHtml, /value="AB12CD"/);
+      assert.match(ownerHtml, /Sao chép mã/);
+
+      grantPrivateRoomAccess(PRIVATE_ROOM, "AB12CD", USER_ID, getSessionGeneration());
+      const guestClient = createTestQueryClient();
+      const guestHtml = renderPreview(VALID_ROOM_ID, guestClient);
+      assert.match(guestHtml, /<main[^>]*aria-busy="false"/);
+      assert.match(guestHtml, /<a[^>]*class="rooms-back"[^>]*href="\/my-rooms"/);
+      assert.match(guestHtml, /Quay lại My Rooms/);
+      assert.match(guestHtml, /<h1[^>]*id="preview-title"[^>]*>Nhóm Ôn Thi<\/h1>/);
+      assert.doesNotMatch(guestHtml, /AB12CD/);
+      assert.doesNotMatch(guestHtml, /Sao chép mã/);
     });
   });
 
@@ -189,11 +318,11 @@ describe("RoomPreviewPage regression suite", () => {
     });
   });
 
-  describe("Error states and retry handling via RoomQueryState", () => {
+  describe("Error states and PrivateRoomGate handling", () => {
     it("renders retry button and error message for network/server error with visible back link", () => {
       const client = createTestQueryClient();
       const query = client.getQueryCache().build(client, {
-        queryKey: roomKeys.detail(VALID_ROOM_ID),
+        queryKey: detailKey(VALID_ROOM_ID),
       });
       query.setState({
         status: "error",
@@ -211,10 +340,10 @@ describe("RoomPreviewPage regression suite", () => {
       assert.match(html, /<a[^>]*class="rooms-text-link"[^>]*href="\/rooms"[^>]*>Khám phá phòng<\/a>/);
     });
 
-    it("renders 403 Forbidden without retry button and preserves back link", () => {
+    it("renders PrivateRoomGate on 403 Forbidden without guest access", () => {
       const client = createTestQueryClient();
       const query = client.getQueryCache().build(client, {
-        queryKey: roomKeys.detail(VALID_ROOM_ID),
+        queryKey: detailKey(VALID_ROOM_ID),
       });
       query.setState({
         status: "error",
@@ -224,18 +353,46 @@ describe("RoomPreviewPage regression suite", () => {
 
       const html = renderPreview(VALID_ROOM_ID, client);
 
-      assert.match(html, /<a[^>]*class="rooms-back"[^>]*href="\/rooms"/);
-      assert.match(html, /<section[^>]*class="rooms-empty"[^>]*role="alert"/);
-      assert.match(html, /<h2>Không thể truy cập phòng<\/h2>/);
-      assert.match(html, /<p>Bạn không có quyền truy cập phòng này\.<\/p>/);
+      assert.match(html, /<section[^>]*class="prooms-access"[^>]*aria-labelledby="private-access-title"/);
+      assert.match(html, /<h1 id="private-access-title">Phòng riêng được bảo vệ<\/h1>/);
+      assert.match(html, /<form[^>]*aria-labelledby="private-access-title"/);
+      assert.doesNotMatch(html, /<h2[^>]*>/);
+      assert.doesNotMatch(html, /Nhập lại mã mời để truy cập phòng/);
+      assert.match(html, /<button class="rooms-button" type="submit">Tham gia<\/button>/);
+      assert.match(html, /<a[^>]*class="rooms-text-link"[^>]*href="\/my-rooms"[^>]*>Quay về My Rooms<\/a>/);
       assert.doesNotMatch(html, /<button[^>]*>Thử lại<\/button>/);
-      assert.match(html, /<a[^>]*class="rooms-text-link"[^>]*href="\/rooms"[^>]*>Khám phá phòng<\/a>/);
+    });
+
+    it("renders PrivateRoomGate with preserved errorCode and 0 detail requests after guest rejection", () => {
+      let detailCalls = 0;
+      globalThis.__ROOM_PREVIEW_TEST_API_REQUEST__ = async () => {
+        detailCalls++;
+        return new globalThis.Response(JSON.stringify(PRIVATE_ROOM), { status: 200 });
+      };
+
+      grantPrivateRoomAccess(PRIVATE_ROOM, "AB12CD", USER_ID, getSessionGeneration());
+      rejectPrivateRoomAccess(VALID_ROOM_ID, "UNAUTHORIZED");
+
+      assert.equal(getPrivateRoomAccess(VALID_ROOM_ID), null);
+      assert.equal(getPrivateRoomRejection(VALID_ROOM_ID)?.code, "UNAUTHORIZED");
+
+      const rejectedHtml = renderPreview(VALID_ROOM_ID, createTestQueryClient());
+      assert.equal(detailCalls, 0);
+      assert.match(rejectedHtml, /<h1 id="private-access-title">Phòng riêng được bảo vệ<\/h1>/);
+      assert.match(rejectedHtml, /Phiên kết nối đã hết hạn\. Đăng nhập lại để tiếp tục\./);
+      assert.match(rejectedHtml, /<a[^>]*href="\/login"[^>]*>Đăng nhập lại<\/a>/);
+
+      // Revalidation clears rejection and restores guest preview
+      grantPrivateRoomAccess(PRIVATE_ROOM, "XY98ZA", USER_ID, getSessionGeneration());
+      assert.equal(getPrivateRoomRejection(VALID_ROOM_ID), null);
+      const restoredHtml = renderPreview(VALID_ROOM_ID, createTestQueryClient());
+      assert.match(restoredHtml, /<h1[^>]*id="preview-title"[^>]*>Nhóm Ôn Thi<\/h1>/);
     });
 
     it("renders 404 Not Found without retry button and preserves back link", () => {
       const client = createTestQueryClient();
       const query = client.getQueryCache().build(client, {
-        queryKey: roomKeys.detail(VALID_ROOM_ID),
+        queryKey: detailKey(VALID_ROOM_ID),
       });
       query.setState({
         status: "error",
@@ -262,7 +419,7 @@ describe("RoomPreviewPage regression suite", () => {
         return { ok: true, json: async () => SAMPLE_ROOM };
       };
 
-      const query = roomQuery("invalid-uuid");
+      const query = privateRoomDetailQuery("invalid-uuid", USER_ID);
       await assert.rejects(
         async () => query.queryFn({ signal: undefined }),
         (err) => err instanceof ApiError && err.status === 404
@@ -272,15 +429,21 @@ describe("RoomPreviewPage regression suite", () => {
   });
 
   describe("Navigation destinations", () => {
-    it("ensures back link targets /rooms and join link targets /rooms/:id", () => {
-      const client = createTestQueryClient();
-      client.setQueryData(roomKeys.detail(VALID_ROOM_ID), SAMPLE_ROOM);
+    it("ensures public back link targets /rooms and private back link targets /my-rooms with join targeting /rooms/:id", () => {
+      const publicClient = createTestQueryClient();
+      publicClient.setQueryData(detailKey(VALID_ROOM_ID), SAMPLE_ROOM);
+      const publicHtml = renderPreview(VALID_ROOM_ID, publicClient);
+      const publicHrefs = [...publicHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+      assert.ok(publicHrefs.includes("/rooms"));
+      assert.ok(publicHrefs.includes(`/rooms/${VALID_ROOM_ID}`));
 
-      const html = renderPreview(VALID_ROOM_ID, client);
-
-      const backMatches = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
-      assert.ok(backMatches.includes("/rooms"));
-      assert.ok(backMatches.includes(`/rooms/${VALID_ROOM_ID}`));
+      const privateClient = createTestQueryClient();
+      privateClient.setQueryData(detailKey(VALID_ROOM_ID), PRIVATE_ROOM);
+      const privateHtml = renderPreview(VALID_ROOM_ID, privateClient);
+      const privateHrefs = [...privateHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+      assert.ok(privateHrefs.includes("/my-rooms"));
+      assert.ok(privateHrefs.includes(`/rooms/${VALID_ROOM_ID}`));
+      assert.ok(privateHrefs.includes("/rooms"));
     });
   });
 });

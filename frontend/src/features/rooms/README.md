@@ -1,5 +1,9 @@
 # Focus Room - TSK-18
 
+## TSK-22 · Phòng riêng
+
+Contract, quyền owner/guest, memory access, refresh/reconnect, capacity, lỗi và lệnh kiểm thử: [PRIVATE-ROOMS.md](./PRIVATE-ROOMS.md). Các cập nhật TSK-22 thay thế mô tả TSK-13/14 cũ bên dưới về My Rooms public, placeholder online và detail cache dùng chung.
+
 ## TSK-21 — Pomodoro End-to-End
 
 ### API và vòng đời

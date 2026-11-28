@@ -5,8 +5,10 @@ import com.lofi.studyroombackend.dto.response.StudySessionResponse;
 import com.lofi.studyroombackend.entity.RoomEntity;
 import com.lofi.studyroombackend.entity.StudySessionEntity;
 import com.lofi.studyroombackend.entity.UserEntity;
+import com.lofi.studyroombackend.entity.enums.RoomVisibility;
 import com.lofi.studyroombackend.entity.enums.StudySessionStatus;
 import com.lofi.studyroombackend.event.StudySessionCompletedEvent;
+import com.lofi.studyroombackend.realtime.PresenceRegistry;
 import com.lofi.studyroombackend.repository.RoomRepository;
 import com.lofi.studyroombackend.repository.StudySessionRepository;
 import com.lofi.studyroombackend.repository.UserRepository;
@@ -39,6 +41,7 @@ class StudySessionServiceImplTest {
     private RoomRepository roomRepository;
     private UserRepository userRepository;
     private ApplicationEventPublisher eventPublisher;
+    private PresenceRegistry presenceRegistry;
     private StudySessionServiceImpl service;
 
     private UserEntity user;
@@ -50,7 +53,9 @@ class StudySessionServiceImplTest {
         roomRepository = mock(RoomRepository.class);
         userRepository = mock(UserRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
-        service = new StudySessionServiceImpl(studySessionRepository, roomRepository, userRepository, eventPublisher);
+        presenceRegistry = new PresenceRegistry();
+        service = new StudySessionServiceImpl(
+                studySessionRepository, roomRepository, userRepository, eventPublisher, presenceRegistry);
 
         user = new UserEntity();
         user.setId(UUID.randomUUID());
@@ -120,6 +125,56 @@ class StudySessionServiceImplTest {
         verify(eventPublisher).publishEvent(any(StudySessionCompletedEvent.class));
         // Phiên trả về là phiên MỚI.
         assertEquals("IN_PROGRESS", response.getStatus());
+    }
+
+    @Test
+    void start_privateRoom_nonMemberRejected403BeforeClosingRunningSession() {
+        StudySessionEntity oldSession = givenRunningSession(30);
+        UserEntity owner = new UserEntity();
+        owner.setId(UUID.randomUUID());
+        RoomEntity privateRoom = new RoomEntity();
+        privateRoom.setId(UUID.randomUUID());
+        privateRoom.setOwner(owner);
+        privateRoom.setVisibility(RoomVisibility.PRIVATE);
+        privateRoom.setInviteCode("PRV123");
+        privateRoom.setActive(true);
+        when(roomRepository.findById(privateRoom.getId())).thenReturn(Optional.of(privateRoom));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.start(startRequest(privateRoom.getId()), user.getId()));
+
+        assertEquals(403, ex.getStatusCode().value());
+        assertEquals(StudySessionStatus.IN_PROGRESS, oldSession.getStatus());
+        assertNull(oldSession.getEndedAt());
+        verify(studySessionRepository, never()).saveAndFlush(any(StudySessionEntity.class));
+        verify(studySessionRepository, never()).save(any(StudySessionEntity.class));
+        verify(eventPublisher, never()).publishEvent(any(StudySessionCompletedEvent.class));
+    }
+
+    @Test
+    void start_privateRoom_ownerOrPresenceMemberAllowed() {
+        UserEntity owner = new UserEntity();
+        owner.setId(UUID.randomUUID());
+        RoomEntity privateRoom = new RoomEntity();
+        privateRoom.setId(UUID.randomUUID());
+        privateRoom.setOwner(owner);
+        privateRoom.setVisibility(RoomVisibility.PRIVATE);
+        privateRoom.setInviteCode("PRV456");
+        privateRoom.setMaxSlots(10);
+        privateRoom.setActive(true);
+        when(roomRepository.findById(privateRoom.getId())).thenReturn(Optional.of(privateRoom));
+        when(userRepository.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
+        when(studySessionRepository.findFirstByUserIdAndStatusOrderByStartedAtDesc(
+                owner.getId(), StudySessionStatus.IN_PROGRESS)).thenReturn(Optional.empty());
+
+        StudySessionResponse ownerSession = service.start(startRequest(privateRoom.getId()), owner.getId());
+        assertEquals("IN_PROGRESS", ownerSession.getStatus());
+        assertEquals(privateRoom.getId(), ownerSession.getRoomId());
+
+        presenceRegistry.join("socket-1", privateRoom.getId(), user.getId(), "Member", null, 10);
+        StudySessionResponse memberSession = service.start(startRequest(privateRoom.getId()), user.getId());
+        assertEquals("IN_PROGRESS", memberSession.getStatus());
+        assertEquals(privateRoom.getId(), memberSession.getRoomId());
     }
 
     @Test

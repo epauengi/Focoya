@@ -32,8 +32,21 @@ public interface RoomRepository extends JpaRepository<RoomEntity, UUID> {
     // Sinh mã mời xong phải kiểm tra chưa phòng nào dùng.
     boolean existsByInviteCode(String inviteCode);
 
-    // Đếm phòng đang mở của 1 user (owner.id = ? AND is_active = true) -> giới hạn tối đa 2 phòng riêng.
+    // Đếm phòng đang mở của 1 user theo visibility (owner.id = ? AND visibility = ? AND is_active = true) -> giới hạn tối đa 2 phòng riêng.
+    long countByOwnerIdAndVisibilityAndActiveTrue(UUID ownerId, RoomVisibility visibility);
+
+    // Giữ lại để tương thích nếu có chỗ dùng chung theo owner + active.
     long countByOwnerIdAndActiveTrue(UUID ownerId);
+
+    // Danh sách phòng riêng đang mở của chính user, thứ tự xác định.
+    @Query("""
+            SELECT r FROM RoomEntity r
+            WHERE r.owner.id = :ownerId
+              AND r.visibility = :visibility
+              AND r.active = true
+            ORDER BY r.createdAt ASC, r.name ASC, r.id ASC""")
+    List<RoomEntity> findActiveOwnedRooms(@Param("ownerId") UUID ownerId,
+                                          @Param("visibility") RoomVisibility visibility);
 
     // DataSeeder: phòng mẫu này đã có chưa (chống seed trùng khi restart).
     boolean existsByNameAndVisibility(String name, RoomVisibility visibility);

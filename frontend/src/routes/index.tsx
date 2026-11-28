@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { RoomsLayout } from "@/features/rooms/RoomsLayout";
-import { ExplorePage, MyRoomsPage } from "@/features/rooms/ExplorePage";
+import { ExplorePage } from "@/features/rooms/ExplorePage";
+import { MyRoomsPage } from "@/features/rooms/MyRoomsPage";
 import { RoomPreviewPage } from "@/features/rooms/RoomPreviewPage";
 import { FocusRoomPage } from "@/features/rooms/FocusRoomPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";

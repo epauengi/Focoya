@@ -88,7 +88,7 @@ Room cards: 16px; image corners: 11px; search: 12px; room actions: 11px. Filter 
 
 ## Components
 
-- **Room card:** full-card link to preview; 16:10 image, theme badge, title, illustrative online count.
+- **Room card:** full-card link to preview; 16:10 image, theme badge, title, capacity. Preview/private cards show the last known REST online count, never a seat reservation.
 - **Search/filter:** URL-backed query and theme; selected buttons expose `aria-pressed`; unmatched search offers reset.
 - **Primary action:** minimum 48px height, blue fill, white text; hover `#1E40AF`. Focus-visible ring: 3px blue, 4px offset.
 - **Focus tools:** clock/Pomodoro switch, 25/5/15-minute modes, start/pause/reset, temporary tasks, wallpaper, tips, fullscreen. Audio remains unavailable with an honest message.
@@ -115,3 +115,10 @@ Room cards: 16px; image corners: 11px; search: 12px; room actions: 11px. Filter 
 - Toast always provides completion fallback. Native notification permission requires explicit settings interaction. Denied/unsupported guidance; no closed-tab delivery promise.
 - Controlled navigation offers End then Leave. Ambiguous responses never show success or blind replay. Refresh warning cannot guarantee completion; no backend ownership restored from storage.
 - Existing user-scoped profile query refreshes XP/level/hours without optimistic increments. Cross-tab/backend limits: rooms README.
+
+## TSK-22 · Private room behavior
+
+- `/my-rooms` extends the pastel gallery with owned private cards, count out of two, blue Create action, inline Join by Code, and separate Explore link. Native labelled fields and bundled scene radio previews; inline validation, pending, empty, retry and uncertain-create states. No new UI dependency.
+- Owner cards/preview expose selectable invite code and Clipboard sharing with verified success/fallback. Guest metadata hides the code. Preview distinguishes REST last-known online from confirmed realtime membership.
+- Guests validate a code explicitly then preview before entering. Metadata/credential remain room/user/auth-generation scoped in memory only. Refresh/direct private UUID shows protected code re-entry, not metadata or a focus session.
+- Admission errors offer retry, code re-entry, My Rooms and Explore. Seats/Pomodoro remain gated by confirmed JOIN; no autoplay ambience or optimistic attendance. Full behavior and tests: `frontend/src/features/rooms/PRIVATE-ROOMS.md`.

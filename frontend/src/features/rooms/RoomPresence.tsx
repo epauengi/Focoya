@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { getAccessToken, getSession, subscribeSession } from '../../auth/session';
+import { Link } from 'react-router';
+import { rejectPrivateRoomAccess } from './privateRoomAccess';
 import { ProfileAvatar } from '../profile/ProfileAvatar';
 import { createRoomPresence, type PresenceState, type PresenceStatus, type PresenceUser } from './realtime';
 import { projectPresence, type PresencePresentation } from './presencePresentation';
@@ -52,9 +54,10 @@ function Seat({ user, self }: { user: PresenceUser; self: boolean }) {
   </>;
 }
 
-export function RoomPresence({ roomId, maxSlots, children }: {
+export function RoomPresence({ roomId, maxSlots, initialInviteCode, children }: {
   roomId: string;
   maxSlots: number;
+  initialInviteCode?: string;
   children: (details: ReactNode, seats: ReactNode) => ReactNode;
 }) {
   const session = useSyncExternalStore(subscribeSession, getSession);
@@ -65,7 +68,7 @@ export function RoomPresence({ roomId, maxSlots, children }: {
   const [motion, setMotion] = useState(noMotion);
   const [attempt, setAttempt] = useState(0);
   const [inviteCode, setInviteCode] = useState('');
-  const [submittedCode, setSubmittedCode] = useState('');
+  const [submittedCode, setSubmittedCode] = useState(initialInviteCode ?? '');
   const [paused, setPaused] = useState(false);
   const controller = useRef<ReturnType<typeof createRoomPresence> | null>(null);
   const timerIntent = useRef<PresenceStatus | null>(null);
@@ -110,6 +113,7 @@ export function RoomPresence({ roomId, maxSlots, children }: {
         getToken: getAccessToken,
         onChange: (next) => {
           if (!active) return;
+          if (initialInviteCode && next.errorCode && ['FORBIDDEN', 'INVALID_INVITE_CODE', 'ROOM_NOT_FOUND', 'UNAUTHORIZED'].includes(next.errorCode)) rejectPrivateRoomAccess(roomId, next.errorCode);
           const before = previous;
           const current = next.connection === 'connected' && next.snapshot ? projectPresence(before, next.snapshot) : null;
           previous = current;
@@ -158,7 +162,7 @@ export function RoomPresence({ roomId, maxSlots, children }: {
       client?.disconnect();
     };
     // Authentication publishes a new session on token refresh; replace the old socket.
-  }, [roomId, submittedCode, attempt, paused, session]);
+  }, [roomId, submittedCode, initialInviteCode, attempt, paused, session]);
 
   const presence = connection.session === session ? connection.presence : initialState;
   const members = presence.connection === 'connected' && presence.snapshot ? connection.members : null;
@@ -260,6 +264,13 @@ export function RoomPresence({ roomId, maxSlots, children }: {
   ) : null;
 
   return <TimerPresenceContext.Provider value={{ ready: Boolean(self && members), setTimerStatus }}>
+    {presence.connection === 'error' && <section className="focus-admission-error" role="alert" aria-label="Chưa được vào phòng">
+      <h1>Chưa thể vào phòng</h1><p>{presence.error || 'Kết nối chưa xác nhận quyền vào phòng.'}</p>
+      {!needsCode && <button type="button" onClick={reconnect}>Thử lại</button>}
+      <Link to="/my-rooms">Nhập lại mã · Quay về My Rooms</Link>
+      <Link to="/rooms">Chọn phòng khác</Link>
+      {presence.errorCode === 'UNAUTHORIZED' && <Link to="/login">Đăng nhập lại</Link>}
+    </section>}
     {children(details, seats)}
   </TimerPresenceContext.Provider>;
 }

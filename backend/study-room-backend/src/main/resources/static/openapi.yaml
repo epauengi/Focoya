@@ -1,7 +1,11 @@
 openapi: 3.0.3
 info:
   title: Virtual Study Room API
-  description: API Contract v1 cho nền tảng phòng học ảo và cộng đồng.
+  description: >-
+    API Contract v1 cho nền tảng phòng học ảo và cộng đồng (REST controllers phục vụ dưới prefix `/api`).
+    Giới hạn đã biết: `PresenceRegistry` lưu trạng thái realtime trong RAM trên 1 JVM (multi-instance cần shared store),
+    và endpoint join theo `inviteCode` không đặt rate limiter trong RAM ứng dụng — production cần cấu hình rate limit/WAF ở gateway/reverse proxy để chống brute-force mã mời 6 ký tự.
+    Các response phòng riêng / invite (`/rooms/me`, `POST /rooms`, `/rooms/join/{inviteCode}`, `GET /rooms/{roomId}` với phòng `PRIVATE`) trả header `Cache-Control: no-store`.
   version: 1.0.0
 
 servers:
@@ -145,25 +149,36 @@ paths:
   /rooms:
     get:
       tags: [Room]
-      summary: Danh sách phòng
+      summary: Danh sách phòng công khai
+      description: Trả danh sách phòng `PUBLIC` đang mở, lọc theo `theme` và từ khóa `q`. Không trả `inviteCode`.
       operationId: getRooms
+      parameters:
+        - name: theme
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Danh sách phòng
           content:
             application/json:
               schema:
-                type: object
-                required: [rooms]
-                properties:
-                  rooms:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Room"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
 
     post:
       tags: [Room]
-      summary: Tạo phòng
+      summary: Tạo phòng riêng
+      description: >-
+        Tạo phòng `PRIVATE` (tối đa 2 phòng riêng đang hoạt động mỗi user, đồng bộ bằng khóa dòng user ở DB).
+        Server tự sinh `inviteCode` 6 ký tự `[A-Z0-9]{6}` và retry có giới hạn nếu trùng khóa duy nhất.
       operationId: createRoom
       security:
         - bearerAuth: []
@@ -174,8 +189,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateRoomRequest"
       responses:
-        "200":
-          description: Phòng đã được tạo
+        "201":
+          description: Phòng riêng đã được tạo (kèm `inviteCode` cho chủ phòng)
           content:
             application/json:
               schema:
@@ -184,11 +199,73 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Không thể tạo mã mời duy nhất sau số lần thử cho phép
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms/me:
+    get:
+      tags: [Room]
+      summary: Danh sách phòng riêng của tôi
+      description: >-
+        Trả các phòng `PRIVATE` đang hoạt động thuộc sở hữu của user hiện tại theo thứ tự xác định
+        (`createdAt ASC, name ASC, id ASC`), kèm `inviteCode`. Route được bảo vệ trước `/rooms/{roomId}`.
+      operationId: getMyRooms
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Danh sách phòng riêng của user hiện tại
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /rooms/join/{inviteCode}:
+    get:
+      tags: [Room]
+      summary: Xem/vào phòng theo mã mời
+      description: >-
+        Chuẩn hóa `trim` + chữ hoa và kiểm tra đúng 6 ký tự `[A-Z0-9]{6}` (`400` nếu sai định dạng).
+        Nếu phòng đã đủ chỗ (`online >= maxSlots`), người dùng đã có mặt trong `PresenceRegistry` (single-JVM) vẫn được phép qua;
+        người ngoài nhận `400`. `inviteCode` chỉ hiển thị cho chủ phòng, `null` với khách.
+        Lưu ý: endpoint không có in-memory rate limiter; production phải giới hạn tốc độ ở gateway/WAF để chống brute-force.
+      operationId: joinRoomByInviteCode
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inviteCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9]{6}$"
+      responses:
+        "200":
+          description: Thông tin phòng hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /rooms/{roomId}:
     get:
       tags: [Room]
       summary: Chi tiết phòng
+      description: Phòng `PUBLIC` cho phép khách xem (`inviteCode` là `null`). Phòng `PRIVATE` chỉ chủ phòng xem được theo UUID (`403` với người khác).
       operationId: getRoom
       parameters:
         - $ref: "#/components/parameters/RoomId"
@@ -199,6 +276,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Room"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -308,8 +387,9 @@ paths:
       tags: [Study]
       summary: Bắt đầu phiên học
       description: >-
-        startedAt là giờ server. Nếu user còn phiên chưa kết thúc, phiên đó được chốt trước
-        (theo luật của /study-sessions/finish) rồi mới tạo phiên mới.
+        startedAt là giờ server. Với phòng `PRIVATE`, user phải là chủ phòng hoặc đang có mặt trong `PresenceRegistry`
+        (kiểm tra trên 1 JVM trước khi chốt bất kỳ phiên `IN_PROGRESS` nào trước đó; trả `403` nếu không đủ quyền).
+        Nếu hợp lệ và user còn phiên chưa kết thúc, phiên cũ được chốt trước (theo luật của /study-sessions/finish) rồi mới tạo phiên mới.
       operationId: startStudySession
       security:
         - bearerAuth: []
@@ -330,6 +410,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -607,31 +689,28 @@ components:
       type: object
       required:
         - id
-        - ownerId
         - name
-        - themeKey
-        - visibility
+        - theme
+        - online
         - maxSlots
-        - isActive
+        - visibility
       properties:
         id:
           type: string
           format: uuid
-        ownerId:
-          type: string
-          format: uuid
-          nullable: true
         name:
           type: string
+        theme:
+          type: string
+        online:
+          type: integer
+          description: Số người đang online trong phòng (đọc từ PresenceRegistry trên 1 JVM, không lưu DB).
+        maxSlots:
+          type: integer
+        image:
+          type: string
+          nullable: true
         description:
-          type: string
-          nullable: true
-        themeKey:
-          type: string
-        sceneKey:
-          type: string
-          nullable: true
-        ambientTrackKey:
           type: string
           nullable: true
         visibility:
@@ -640,37 +719,34 @@ components:
         inviteCode:
           type: string
           nullable: true
-        maxSlots:
-          type: integer
-        isActive:
-          type: boolean
+          description: Chỉ trả về cho chủ phòng, null với người khác hoặc phòng PUBLIC.
 
     CreateRoomRequest:
       type: object
       required:
         - name
-        - themeKey
-        - visibility
+        - theme
         - maxSlots
       properties:
         name:
           type: string
+          maxLength: 100
         description:
           type: string
+          maxLength: 500
           nullable: true
-        themeKey:
+        theme:
           type: string
-        sceneKey:
+          enum: [Study, Café, Nature, Gaming, Chill]
+        image:
           type: string
+          maxLength: 50
+          pattern: "^/room-assets/(?:rainy\\.jpg|midnight\\.png|autumn\\.png|sunset\\.jpg|bg\\.png)$"
           nullable: true
-        ambientTrackKey:
-          type: string
-          nullable: true
-        visibility:
-          type: string
-          enum: [PUBLIC, PRIVATE]
         maxSlots:
           type: integer
+          minimum: 10
+          maximum: 30
 
     UpdateRoomRequest:
       type: object

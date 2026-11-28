@@ -70,4 +70,29 @@ class RoomPresenceServiceTest {
         verify(rooms, never()).save(any());
         verify(users, never()).save(any());
     }
+
+    @Test
+    void joinRejectsNonAsciiCharactersThatUppercaseToAscii() {
+        var rooms = mock(RoomRepository.class);
+        var users = mock(UserRepository.class);
+        var messaging = mock(SimpMessagingTemplate.class);
+        var registry = new PresenceRegistry();
+        var tokens = new JwtTokenProvider("service-test-secret-at-least-thirty-two-bytes", 30, 7);
+        var security = new StompSecurityInterceptor(tokens, registry);
+        var service = new RoomPresenceService(rooms, users, registry, security, messaging);
+        var room = new RoomEntity();
+        room.setId(UUID.randomUUID());
+        room.setVisibility(com.lofi.studyroombackend.entity.enums.RoomVisibility.PRIVATE);
+        room.setInviteCode("SBC123");
+        room.setMaxSlots(2);
+        room.setActive(true);
+        var owner = new UserEntity();
+        owner.setId(UUID.randomUUID());
+        room.setOwner(owner);
+        when(rooms.findById(room.getId())).thenReturn(Optional.of(room));
+
+        assertThatThrownBy(() -> service.join("session", UUID.randomUUID(), room.getId(),
+                new RoomPresenceService.JoinPayload("\u017FBC123")))
+                .hasMessageContaining("INVALID_INVITE_CODE");
+    }
 }

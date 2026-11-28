@@ -109,6 +109,14 @@ public class PresenceRegistry {
         return location != null && location.roomId().equals(roomId);
     }
 
+    public synchronized boolean containsUser(UUID roomId, UUID userId) {
+        if (roomId == null || userId == null) {
+            return false;
+        }
+        Map<UUID, Entry> members = rooms.get(roomId);
+        return members != null && members.containsKey(userId);
+    }
+
     public synchronized int countOnline(UUID roomId) {
         Map<UUID, Entry> members = rooms.get(roomId);
         return members == null ? 0 : members.size();

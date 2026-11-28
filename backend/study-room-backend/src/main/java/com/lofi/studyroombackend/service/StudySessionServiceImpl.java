@@ -5,11 +5,14 @@ import com.lofi.studyroombackend.dto.response.StudySessionResponse;
 import com.lofi.studyroombackend.entity.RoomEntity;
 import com.lofi.studyroombackend.entity.StudySessionEntity;
 import com.lofi.studyroombackend.entity.UserEntity;
+import com.lofi.studyroombackend.entity.enums.RoomVisibility;
 import com.lofi.studyroombackend.entity.enums.StudySessionStatus;
 import com.lofi.studyroombackend.event.StudySessionCompletedEvent;
+import com.lofi.studyroombackend.realtime.PresenceRegistry;
 import com.lofi.studyroombackend.repository.RoomRepository;
 import com.lofi.studyroombackend.repository.StudySessionRepository;
 import com.lofi.studyroombackend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,15 +40,26 @@ public class StudySessionServiceImpl implements StudySessionService {
     private final UserRepository userRepository;
     // Công cụ có sẵn của Spring để phát "tin báo" cho các class khác đang lắng nghe (xem closeSession).
     private final ApplicationEventPublisher eventPublisher;
+    private final PresenceRegistry presenceRegistry;
+
+    @Autowired
+    public StudySessionServiceImpl(StudySessionRepository studySessionRepository,
+                                   RoomRepository roomRepository,
+                                   UserRepository userRepository,
+                                   ApplicationEventPublisher eventPublisher,
+                                   PresenceRegistry presenceRegistry) {
+        this.studySessionRepository = studySessionRepository;
+        this.roomRepository = roomRepository;
+        this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
+        this.presenceRegistry = presenceRegistry;
+    }
 
     public StudySessionServiceImpl(StudySessionRepository studySessionRepository,
                                    RoomRepository roomRepository,
                                    UserRepository userRepository,
                                    ApplicationEventPublisher eventPublisher) {
-        this.studySessionRepository = studySessionRepository;
-        this.roomRepository = roomRepository;
-        this.userRepository = userRepository;
-        this.eventPublisher = eventPublisher;
+        this(studySessionRepository, roomRepository, userRepository, eventPublisher, new PresenceRegistry());
     }
 
     // @Transactional: mọi lệnh ghi DB trong hàm này thành công cùng nhau hoặc cùng bị hủy (rollback).
@@ -56,15 +70,24 @@ public class StudySessionServiceImpl implements StudySessionService {
         UserEntity user = lockCurrentUser(currentUserId);
 
         // 2. Phòng phải tồn tại và đang mở.
-        //    Không kiểm tra user có đang ngồi trong phòng hay không: danh sách người trong phòng nằm ở RAM
-        //    (PresenceRegistry, WebSocket), API này không phụ thuộc vào kết nối WebSocket.
-        //    Response chỉ trả lại roomId mà client vừa gửi, nên không lộ thông tin gì của phòng riêng.
         Optional<RoomEntity> foundRoom = roomRepository.findById(request.getRoomId());
         if (foundRoom.isEmpty() || !foundRoom.get().isActive()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Phòng không tồn tại hoặc đã đóng");
         }
+        RoomEntity room = foundRoom.get();
 
-        // 3. Luật "mỗi user chỉ có 1 phiên đang chạy": còn phiên cũ chưa kết thúc thì chốt nó trước
+        // 3. Phòng riêng: chỉ chủ phòng hoặc thành viên đang có mặt trong PresenceRegistry mới được bắt đầu phiên học.
+        //    Kiểm tra TRƯỚC khi chốt/thay đổi phiên học đang chạy trước đó.
+        if (room.getVisibility() == RoomVisibility.PRIVATE) {
+            boolean owner = room.getOwner() != null && room.getOwner().getId().equals(currentUserId);
+            boolean member = presenceRegistry.containsUser(room.getId(), currentUserId);
+            if (!owner && !member) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bạn phải tham gia phòng riêng trước khi bắt đầu phiên học");
+            }
+        }
+
+        // 4. Luật "mỗi user chỉ có 1 phiên đang chạy": còn phiên cũ chưa kết thúc thì chốt nó trước
         //    (theo đúng luật của finish). Vì vậy start luôn thành công, FE không bị kẹt khi user đóng tab giữa chừng.
         Instant now = Instant.now();
         Optional<StudySessionEntity> running = findRunningSession(currentUserId);
@@ -72,10 +95,10 @@ public class StudySessionServiceImpl implements StudySessionService {
             closeSession(running.get(), now);
         }
 
-        // 4. Tạo phiên mới. startedAt là giờ SERVER. status mặc định IN_PROGRESS (khai báo trong entity).
+        // 5. Tạo phiên mới. startedAt là giờ SERVER. status mặc định IN_PROGRESS (khai báo trong entity).
         StudySessionEntity session = new StudySessionEntity();
         session.setUser(user);
-        session.setRoom(foundRoom.get());
+        session.setRoom(room);
         session.setStartedAt(now);
 
         session = studySessionRepository.save(session);

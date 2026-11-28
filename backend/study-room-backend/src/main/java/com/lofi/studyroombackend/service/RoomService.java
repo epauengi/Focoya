@@ -10,6 +10,8 @@ public interface RoomService {
 
     List<RoomResponse> getPublicRooms(String theme, String q);
 
+    List<RoomResponse> getMyPrivateRooms(UUID currentUserId);
+
     // currentUserId = null nghĩa là khách chưa đăng nhập.
     RoomResponse getRoom(UUID roomId, UUID currentUserId);
 

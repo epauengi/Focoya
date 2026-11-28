@@ -27,8 +27,11 @@ public class CreateRoomRequest {
     @Pattern(regexp = "Study|Café|Nature|Gaming|Chill", message = "Theme phải là Study, Café, Nature, Gaming hoặc Chill")
     private String theme;
 
-    // Không bắt buộc. Nếu gửi thì phải là ảnh có sẵn trong FE (thư mục public/room-assets), không nhận link ngoài.
-    @Pattern(regexp = "/room-assets/[A-Za-z0-9._-]+", message = "Ảnh phải là file trong /room-assets/")
+    // Không bắt buộc. Nếu gửi thì phải là một trong 5 ảnh có sẵn trong FE (thư mục public/room-assets).
+    @Pattern(
+            regexp = "/room-assets/(?:rainy\\.jpg|midnight\\.png|autumn\\.png|sunset\\.jpg|bg\\.png)",
+            message = "Ảnh phải thuộc danh sách /room-assets/ hợp lệ"
+    )
     @Size(max = 50, message = "Đường dẫn ảnh tối đa 50 ký tự")
     private String image;
 

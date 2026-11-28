@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class RoomPresenceService {
-    private static final Pattern INVITE_CODE = Pattern.compile("[A-Z0-9]{6}");
+    private static final Pattern INVITE_CODE = Pattern.compile("^[A-Za-z0-9]{6}$");
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
     private final PresenceRegistry presenceRegistry;
@@ -97,8 +97,8 @@ public class RoomPresenceService {
 
     private void validateInvite(JoinPayload payload) {
         if (payload != null && payload.inviteCode() != null) {
-            String normalized = payload.inviteCode().trim().toUpperCase(Locale.ROOT);
-            if (!INVITE_CODE.matcher(normalized).matches()) throw failure(HttpStatus.BAD_REQUEST, "INVALID_INVITE_CODE");
+            String trimmed = payload.inviteCode().trim();
+            if (!INVITE_CODE.matcher(trimmed).matches()) throw failure(HttpStatus.BAD_REQUEST, "INVALID_INVITE_CODE");
         }
     }
 
